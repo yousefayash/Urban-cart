@@ -13,15 +13,14 @@
 </head>
 
 <body>
-    <div class="navbar-nav">
-    <a href="index.html">Home</a>
-    <a href="shop.html">Shop</a>
-    <a href="categories.html">Categories</a>
-    <a href="search.html" class="active">Search</a>
-    <a href="orders.html">Orders</a>
-    <a href="profile.html">Profile</a>
-    <a href="wishlist.html">Wishlist</a>
-</div>
+    <nav class="navbar">
+        <div class="navbar-inner"><a href="index.html" class="navbar-logo">Urban<span>Cart</span></a>
+            <div class="navbar-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="orders.html">Orders</a></div>
+            <div class="navbar-actions">
+                <div class="navbar-search"><span>⌕</span><input class="navbar-search-input" type="search" placeholder="Search products..."></div><a href="wishlist.html" class="navbar-icon-btn">♡<span class="navbar-badge wishlist-badge">0</span></a><button id="theme-toggle" class="navbar-icon-btn theme-toggle" type="button">🌙</button><a href="cart.html" class="navbar-icon-btn" id="cart-icon">🛒<span class="navbar-badge cart-badge">0</span></a><a href="profile.html" class="navbar-icon-btn">♙</a><button class="navbar-hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+            </div>
+        </div>
+    </nav>
     <div class="mobile-overlay"></div>
     <div class="mobile-menu"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="cart.html">Cart</a><a href="profile.html">Account</a></div>
     <main class="ec-page">
