@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="enhancements.css">
+    <title>My Account - Urban Cart</title>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner"><a href="index.html" class="navbar-logo">Urban<span>Cart</span></a>
+            <div class="navbar-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="orders.html">Orders</a></div>
+            <div class="navbar-actions">
+                <div class="navbar-search"><span>⌕</span><input class="navbar-search-input" type="search" placeholder="Search products..."></div><a href="wishlist.html" class="navbar-icon-btn">♡<span class="navbar-badge wishlist-badge">0</span></a><button id="theme-toggle" class="navbar-icon-btn theme-toggle" type="button">🌙</button><a href="cart.html" class="navbar-icon-btn" id="cart-icon">🛒<span class="navbar-badge cart-badge">0</span></a><a href="profile.html" class="navbar-icon-btn">♙</a><button class="navbar-hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+            </div>
+        </div>
+    </nav>
+    <div class="mobile-overlay"></div>
+    <div class="mobile-menu"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="cart.html">Cart</a><a href="profile.html">Account</a></div>
+    <main class="ec-page">
+        <div class="container">
+            <div class="ec-hero"><span class="ec-kicker">Urban Cart / Account</span>
+                <h1 class="ec-title">My account</h1>
+                <p class="ec-subtitle">Manage your profile, saved details and quick access to orders.</p>
+            </div>
+            <div class="profile-grid">
+                <aside class="page-card">
+                    <div class="avatar">U</div>
+                    <h2 style="text-align:center;margin:15px 0 5px" id="profile-name-side">Urban Customer</h2>
+                    <p class="muted" style="text-align:center">Customer account</p>
+                    <nav class="account-nav" style="margin-top:22px"><a class="active" href="profile.html">Profile</a><a href="orders.html">Orders History</a><a href="wishlist.html">Wishlist</a><a href="cart.html">Cart</a></nav>
+                </aside>
+                <section class="page-card">
+                    <h2>Profile information</h2>
+                    <form id="profile-form" style="margin-top:20px">
+                        <div class="form-grid">
+                            <div class="field"><label>Full Name</label><input id="profile-name" required value="Urban Customer"></div>
+                            <div class="field"><label>Email</label><input id="profile-email" type="email" required value="customer@example.com"></div>
+                            <div class="field"><label>Phone</label><input id="profile-phone" value="01000000000"></div>
+                            <div class="field"><label>City</label><input id="profile-city" value="Cairo"></div>
+                            <div class="field full"><label>Address</label><textarea id="profile-address" rows="3">Egypt</textarea></div>
+                        </div><button class="btn btn-primary" type="submit">Save Profile</button>
+                        <p id="profile-message" class="muted" style="margin-top:12px"></p>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </main>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p class="footer-copyright">© 2026 Urban Cart. All rights reserved.</p>
+                <div class="footer-payments"><span>Secure shopping · Responsive · Dark Mode</span></div>
+            </div>
+        </div>
+    </footer>
+    <script src="site.js"></script>
+    <script src="profile.js"></script>
+</body>
+
+</html>
