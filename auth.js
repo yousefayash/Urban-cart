@@ -5,7 +5,7 @@
 
 /* ===== HELPER FUNCTIONS ===== */
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+EGB /.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function isValidPassword(password) {
