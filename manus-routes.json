@@ -1,1 +1,39 @@
-{"routes":[{"path":"/","title":"Urban Cart"},{"path":"/index.html","title":"Urban Cart"},{"path":"/shop.html","title":"Shop"},{"path":"/categories.html","title":"Categories"},{"path":"/product-details.html","title":"Product Details"},{"path":"/cart.html","title":"Cart"},{"path":"/wishlist.html","title":"Wishlist"},{"path":"/signin.html","title":"Sign In"},{"path":"/signup.html","title":"Sign Up"},{"path":"/profile.html","title":"My Account"},{"path":"/orders.html","title":"Orders"},{"path":"/admin.html","title":"Admin Dashboard"}]}
+{
+    "routes": [{
+        "path": "/",
+        "title": "Urban Cart"
+    }, {
+        "path": "/index.html",
+        "title": "Urban Cart"
+    }, {
+        "path": "/shop.html",
+        "title": "Shop"
+    }, {
+        "path": "/categories.html",
+        "title": "Categories"
+    }, {
+        "path": "/product-details.html",
+        "title": "Product Details"
+    }, {
+        "path": "/cart.html",
+        "title": "Cart"
+    }, {
+        "path": "/wishlist.html",
+        "title": "Wishlist"
+    }, {
+        "path": "/signin.html",
+        "title": "Sign In"
+    }, {
+        "path": "/signup.html",
+        "title": "Sign Up"
+    }, {
+        "path": "/profile.html",
+        "title": "My Account"
+    }, {
+        "path": "/orders.html",
+        "title": "Orders"
+    }, {
+        "path": "/admin.html",
+        "title": "Admin Dashboard"
+    }]
+}
