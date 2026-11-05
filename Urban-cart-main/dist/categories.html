@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Categories - Urban Cart</title>
+    <link rel="stylesheet" crossorigin href="./assets/enhancements-Co20JPTC.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner"><a href="index.html" class="navbar-logo">Urban<span>Cart</span></a>
+            <div class="navbar-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="orders.html">Orders</a></div>
+            <div class="navbar-actions">
+                <div class="navbar-search"><span>⌕</span><input class="navbar-search-input" type="search" placeholder="Search products..."></div><a href="wishlist.html" class="navbar-icon-btn">♡<span class="navbar-badge wishlist-badge">0</span></a><button id="theme-toggle" class="navbar-icon-btn theme-toggle" type="button">🌙</button><a href="cart.html" class="navbar-icon-btn" id="cart-icon">🛒<span class="navbar-badge cart-badge">0</span></a><a href="profile.html" class="navbar-icon-btn">♙</a><button class="navbar-hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+            </div>
+        </div>
+    </nav>
+    <div class="mobile-overlay"></div>
+    <div class="mobile-menu"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="cart.html">Cart</a><a href="profile.html">Account</a></div>
+    <main class="ec-page">
+        <div class="container">
+            <div class="ec-hero"><span class="ec-kicker">Urban Cart / Categories</span>
+                <h1 class="ec-title">Shop by category</h1>
+                <p class="ec-subtitle">اضغط على أي كارت علشان تشوف المنتجات المرتبطة بالقسم ده مباشرة.</p>
+            </div>
+            <div id="category-grid" class="category-grid"></div>
+        </div>
+    </main>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p class="footer-copyright">© 2026 Urban Cart. All rights reserved.</p>
+                <div class="footer-payments"><span>Secure shopping · Responsive · Dark Mode</span></div>
+            </div>
+        </div>
+    </footer>
+    <script src="data.js"></script>
+    <script src="site.js"></script>
+    <script src="categories.js"></script>
+</body>
+
+</html>

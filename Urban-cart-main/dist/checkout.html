@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Checkout - Urban Cart</title>
+    <link rel="stylesheet" crossorigin href="./assets/enhancements-Co20JPTC.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner"><a href="index.html" class="navbar-logo">Urban<span>Cart</span></a>
+            <div class="navbar-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="orders.html">Orders</a></div>
+            <div class="navbar-actions">
+                <div class="navbar-search"><span>⌕</span><input class="navbar-search-input" type="search" placeholder="Search products..."></div><a href="wishlist.html" class="navbar-icon-btn">♡<span class="navbar-badge wishlist-badge">0</span></a><button id="theme-toggle" class="navbar-icon-btn theme-toggle" type="button">🌙</button><a href="cart.html" class="navbar-icon-btn" id="cart-icon">🛒<span class="navbar-badge cart-badge">0</span></a><a href="profile.html" class="navbar-icon-btn">♙</a><button class="navbar-hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+            </div>
+        </div>
+    </nav>
+    <div class="mobile-overlay"></div>
+    <div class="mobile-menu"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="cart.html">Cart</a><a href="profile.html">Account</a></div>
+    <main class="ec-page">
+        <div class="container">
+            <div class="ec-hero"><span class="ec-kicker">Urban Cart / Checkout</span>
+                <h1 class="ec-title">Complete your order</h1>
+                <p class="ec-subtitle">Review your cart, enter delivery details and place the order.</p>
+            </div>
+            <div class="checkout-layout">
+                <form id="checkout-form" class="page-card">
+                    <h2>Customer & shipping information</h2>
+                    <div class="form-grid" style="margin-top:20px">
+                        <div class="field"><label>Full Name</label><input required id="customer-name" placeholder="Your name"></div>
+                        <div class="field"><label>Email</label><input required type="email" id="customer-email" placeholder="you@example.com"></div>
+                        <div class="field"><label>Phone</label><input required id="customer-phone" placeholder="01xxxxxxxxx"></div>
+                        <div class="field"><label>City</label><input required id="customer-city" placeholder="Cairo"></div>
+                        <div class="field full"><label>Address</label><textarea required id="customer-address" rows="3" placeholder="Street, building, apartment"></textarea></div>
+                        <div class="field"><label>Postal Code</label><input id="customer-postal" placeholder="12345"></div>
+                        <div class="field"><label>Payment Method</label><select id="payment-method">
+                                <option>Cash on Delivery</option>
+                                <option>Card Payment</option>
+                            </select></div>
+                    </div><button class="btn btn-primary" type="submit">Place Order</button>
+                </form>
+                <aside class="page-card">
+                    <h2>Order Summary</h2>
+                    <div id="checkout-items" style="margin:18px 0"></div>
+                    <div class="summary-lines">
+                        <div class="summary-line"><span>Subtotal</span><strong id="checkout-subtotal">EGB 0.00</strong></div>
+                        <div class="summary-line"><span>Shipping</span><strong id="checkout-shipping">EGB 40.00</strong></div>
+                        <div class="summary-line summary-total"><span>Total</span><strong id="checkout-total">EGB 0.00</strong></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </main>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p class="footer-copyright">© 2026 Urban Cart. All rights reserved.</p>
+                <div class="footer-payments"><span>Secure shopping · Responsive · Dark Mode</span></div>
+            </div>
+        </div>
+    </footer>
+    <script src="data.js"></script>
+    <script src="main.js"></script>
+    <script src="site.js"></script>
+    <script src="checkout.js"></script>
+</body>
+
+</html>

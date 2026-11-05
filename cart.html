@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Shopping cart - Urban Cart">
+  <title>Shopping Cart - Urban Cart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="cart.css">
+  <link rel="stylesheet" href="enhancements.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="index.html" class="navbar-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+        Urban<span>Cart</span>
+      </a>
+      <div class="navbar-nav">
+        <a href="index.html">Home</a>
+        <a href="index.html#categories">Categories</a>
+        <a href="index.html#products">Products</a>
+        <a href="index.html#offers">Offers</a>
+        <a href="wishlist.html">Wishlist</a>
+      </div>
+      <div class="navbar-actions">
+        <div class="navbar-search">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          <input type="text" class="navbar-search-input" id="cart-search" placeholder="Search products..." aria-label="Search products">
+        </div>
+        <a href="wishlist.html" class="navbar-icon-btn" aria-label="Wishlist">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+          <span class="navbar-badge wishlist-badge">0</span>
+        </a>
+        <a href="cart.html" class="navbar-icon-btn active" aria-label="Shopping cart">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+          <span class="navbar-badge cart-badge">0</span>
+        </a>
+        <a href="signin.html" class="navbar-icon-btn" aria-label="Sign in">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+        </a>
+        <button class="navbar-hamburger" aria-label="Open menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mobile-overlay"></div>
+  <div class="mobile-menu">
+    <a href="index.html">Home</a>
+    <a href="index.html#categories">Categories</a>
+    <a href="index.html#products">Products</a>
+    <a href="index.html#offers">Offers</a>
+    <a href="wishlist.html">Wishlist</a>
+    <a href="cart.html" class="active">Cart</a>
+    <a href="signin.html">Sign In</a>
+  </div>
+
+  <main class="cart-page">
+    <div class="cart-container">
+      <div class="cart-breadcrumb"><a href="index.html">Home</a><span>/</span><span>Shopping Cart</span></div>
+      <section class="cart-heading">
+        <div>
+          <div class="cart-eyebrow">YOUR SHOPPING BAG</div>
+          <h1>Shopping Cart <span id="cart-item-count">0</span></h1>
+          <p>Review your items, update quantities, and continue when you're ready.</p>
+        </div>
+        <a class="continue-shopping" href="index.html#products">Continue Shopping <span>→</span></a>
+      </section>
+
+      <section id="cart-content" class="cart-layout">
+        <div class="cart-main">
+          <div class="cart-panel">
+            <div class="cart-panel-head">
+              <strong id="cart-panel-count">0 items</strong>
+              <button id="clear-cart" type="button">Clear cart</button>
+            </div>
+            <div id="cart-items"></div>
+          </div>
+          <div class="secure-note">
+            <div class="secure-icon">✓</div>
+            <div><strong>Safe & secure shopping</strong><p>Your cart is saved in this browser while you shop.</p></div>
+          </div>
+        </div>
+
+        <aside class="order-summary">
+          <h2>Order Summary</h2>
+          <div class="summary-line"><span>Subtotal</span><strong id="summary-subtotal">EGB 0.00</strong></div>
+          <div class="summary-line"><span>Discount</span><strong id="summary-discount">EGB 0.00</strong></div>
+          <div class="summary-line"><span>Shipping</span><strong id="summary-shipping">Free</strong></div>
+          <div class="coupon-box">
+            <label for="coupon-input">Promo code</label>
+            <div><input id="coupon-input" type="text" placeholder="Enter code"><button id="apply-coupon" type="button">Apply</button></div>
+            <small id="coupon-message"></small>
+          </div>
+          <div class="summary-total"><span>Total</span><strong id="summary-total">EGB 0.00</strong></div>
+          <button class="checkout-btn" id="checkout-btn" type="button">Proceed to Checkout <span>→</span></button>
+          <div class="payment-trust"><span>🔒</span> Secure checkout · Protected payment</div>
+        </aside>
+      </section>
+
+      <section class="cart-empty hidden" id="cart-empty">
+        <div class="cart-empty-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0zm12.75 0a.75.75 0 11-1.5 0z"/></svg>
+        </div>
+        <h2>Your Cart is Empty</h2>
+        <p>You haven't added anything to your cart yet. Explore our products and find something you love.</p>
+        <a class="checkout-btn empty-btn" href="index.html#products">Start Shopping <span>→</span></a>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-container"></div>
+  <script src="data.js"></script>
+  <script src="main.js"></script>
+  <script src="cart.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>

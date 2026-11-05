@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Order Success - Urban Cart</title>
+    <link rel="stylesheet" crossorigin href="./assets/enhancements-Co20JPTC.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner"><a href="index.html" class="navbar-logo">Urban<span>Cart</span></a>
+            <div class="navbar-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="orders.html">Orders</a></div>
+            <div class="navbar-actions">
+                <div class="navbar-search"><span>⌕</span><input class="navbar-search-input" type="search" placeholder="Search products..."></div><a href="wishlist.html" class="navbar-icon-btn">♡<span class="navbar-badge wishlist-badge">0</span></a><button id="theme-toggle" class="navbar-icon-btn theme-toggle" type="button">🌙</button><a href="cart.html" class="navbar-icon-btn" id="cart-icon">🛒<span class="navbar-badge cart-badge">0</span></a><a href="profile.html" class="navbar-icon-btn">♙</a><button class="navbar-hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+            </div>
+        </div>
+    </nav>
+    <div class="mobile-overlay"></div>
+    <div class="mobile-menu"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="categories.html">Categories</a><a href="wishlist.html">Wishlist</a><a href="cart.html">Cart</a><a href="profile.html">Account</a></div>
+    <main class="ec-page">
+        <div class="container">
+            <div class="page-card success-box">
+                <div class="success-icon">✓</div><span class="ec-kicker">Urban Cart</span>
+                <h1 class="ec-title">Order Successfully Placed</h1>
+                <p class="ec-subtitle" style="margin:0 auto 25px">Your order has been saved locally. You can review its details and tracking status from your Orders page.</p>
+                <div id="success-details" class="summary-lines" style="text-align:left;margin:25px auto;max-width:420px"></div>
+                <div class="ec-actions" style="justify-content:center"><a class="btn btn-primary" href="orders.html">Track Order</a><a class="btn btn-secondary" href="shop.html">Continue Shopping</a></div>
+            </div>
+        </div>
+    </main>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p class="footer-copyright">© 2026 Urban Cart. All rights reserved.</p>
+                <div class="footer-payments"><span>Secure shopping · Responsive · Dark Mode</span></div>
+            </div>
+        </div>
+    </footer>
+    <script src="site.js"></script>
+    <script src="order-success.js"></script>
+</body>
+
+</html>

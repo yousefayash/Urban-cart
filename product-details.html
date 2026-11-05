@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details - Urban Cart</title>
+  <meta name="description" content="View product details, specifications, reviews and add to cart - Urban Cart">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="product-details.css">
+  <link rel="stylesheet" href="enhancements.css">
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="index.html" class="navbar-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+        Urban<span>Cart</span>
+      </a>
+      <div class="navbar-nav">
+        <a href="index.html">Home</a>
+        <a href="index.html#categories">Categories</a>
+        <a href="index.html#products" class="active">Products</a>
+        <a href="index.html#offers">Offers</a>
+        <a href="wishlist.html">Wishlist</a>
+      </div>
+      <div class="navbar-actions">
+        <div class="navbar-search">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          <input type="text" class="navbar-search-input" placeholder="Search products..." aria-label="Search">
+        </div>
+        <a href="wishlist.html" class="navbar-icon-btn" aria-label="Wishlist">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+          <span class="navbar-badge wishlist-badge">0</span>
+        </a>
+        <a href="cart.html" class="navbar-icon-btn" aria-label="Shopping cart" id="cart-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+          <span class="navbar-badge cart-badge">0</span>
+        </a>
+        <a href="signin.html" class="navbar-icon-btn" aria-label="Sign in">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+        </a>
+        <button class="navbar-hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== MOBILE MENU ===== -->
+  <div class="mobile-overlay"></div>
+  <div class="mobile-menu">
+    <div class="mobile-menu-search">
+      <input type="text" placeholder="Search products..." aria-label="Search">
+    </div>
+    <a href="index.html">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+      Home
+    </a>
+    <a href="index.html#categories">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+      Categories
+    </a>
+    <a href="index.html#products" class="active">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+      Products
+    </a>
+    <a href="index.html#offers">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/></svg>
+      Offers
+    </a>
+    <a href="wishlist.html">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+      Wishlist
+    </a>
+    <a href="signin.html">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+      Sign In
+    </a>
+  </div>
+
+  <!-- ===== PRODUCT DETAILS PAGE ===== -->
+  <main class="product-details-page">
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        <a href="index.html#products">Products</a>
+        <span>/</span>
+        <span class="breadcrumb-current" id="breadcrumb-product-name">Product Details</span>
+      </nav>
+
+      <div class="product-details" id="product-details-container">
+        <!-- Rendered dynamically by product.js -->
+      </div>
+
+      <!-- ===== TABS ===== -->
+      <section class="p-details-tabs-section" id="product-tabs-section">
+        <div class="p-tabs-header">
+          <button class="p-tab-btn active" type="button" data-tab="desc">Description</button>
+          <button class="p-tab-btn" type="button" data-tab="specs">Specifications</button>
+          <button class="p-tab-btn" type="button" data-tab="shipping">Shipping Info</button>
+          <button class="p-tab-btn" type="button" data-tab="returns">Return Policy</button>
+        </div>
+        <div class="p-tabs-content">
+          <div class="p-tab-pane active" id="tab-desc">
+            <h3>Product Description</h3>
+            <p id="p-full-description">High quality product engineered to deliver maximum durability and comfort.</p>
+          </div>
+          <div class="p-tab-pane" id="tab-specs">
+            <h3>Technical Specifications</h3>
+            <table class="specs-table">
+              <tr><th>Brand</th><td id="spec-brand">Urban Cart</td></tr>
+              <tr><th>Category</th><td id="spec-category">General</td></tr>
+              <tr><th>SKU</th><td id="spec-sku">UC-1001</td></tr>
+              <tr><th>Availability</th><td id="spec-stock">In Stock</td></tr>
+              <tr><th>Warranty</th><td>1 Year Official Warranty</td></tr>
+            </table>
+          </div>
+          <div class="p-tab-pane" id="tab-shipping">
+            <h3>Shipping Information</h3>
+            <p>Fast delivery within 2-4 business days across Egypt. Free shipping on all orders over EGB 500. You will receive a tracking number by email as soon as your order leaves our warehouse.</p>
+          </div>
+          <div class="p-tab-pane" id="tab-returns">
+            <h3>Return Policy</h3>
+            <p>14-day hassle-free returns and money back guarantee. Items must be unused and in their original packaging. Refunds are processed within 5 business days of receiving the returned item.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== REVIEWS ===== -->
+    <section class="reviews-section" id="reviews">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Customer Reviews (<span id="review-count">0</span>)</h2>
+        </div>
+        <div class="reviews-grid">
+          <div class="reviews-aside">
+            <div class="rating-summary">
+              <div class="rating-summary-number" id="rating-summary-number">0.0</div>
+              <div class="rating-summary-stars" id="rating-summary-stars"></div>
+              <p class="rating-summary-count" id="rating-summary-count">Based on 0 reviews</p>
+            </div>
+            <div class="rating-distribution" id="rating-distribution"></div>
+          </div>
+          <div class="reviews-main">
+            <div class="review-list" id="review-list"></div>
+
+            <div class="add-review">
+              <h3 class="add-review-title">Write a Review</h3>
+              <form id="add-review-form" novalidate>
+                <div class="form-group">
+                  <label>Your Rating</label>
+                  <div class="rating-selector">
+                    <label aria-label="1 star">
+                      <input type="radio" name="review-rating" value="1" hidden>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="selected"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.482 20.34a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                    </label>
+                    <label aria-label="2 stars">
+                      <input type="radio" name="review-rating" value="2" hidden>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="selected"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.482 20.34a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                    </label>
+                    <label aria-label="3 stars">
+                      <input type="radio" name="review-rating" value="3" hidden>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="selected"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.482 20.34a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                    </label>
+                    <label aria-label="4 stars">
+                      <input type="radio" name="review-rating" value="4" hidden>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="selected"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.482 20.34a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                    </label>
+                    <label aria-label="5 stars">
+                      <input type="radio" name="review-rating" value="5" hidden checked>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="selected"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.482 20.34a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="reviewer-name">Your Name <span class="required">*</span></label>
+                  <input type="text" id="reviewer-name" class="form-input" placeholder="e.g. Ahmed Ali">
+                </div>
+                <div class="form-group">
+                  <label for="review-comment">Your Review <span class="required">*</span></label>
+                  <textarea id="review-comment" class="form-input" rows="4" placeholder="Tell others what you think about this product..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Review</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RELATED PRODUCTS ===== -->
+    <div class="container">
+      <section class="section">
+        <div class="section-header">
+          <h2 class="section-title">Related Products</h2>
+        </div>
+        <div class="product-grid" id="related-products"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p class="footer-copyright">&copy; 2026 Urban Cart. All rights reserved.</p>
+        <div class="footer-payments">
+          <span>Secure Payment:</span>
+          <strong style="font-size: 0.75rem; color: var(--color-muted);">VISA · Mastercard · PayPal · Apple Pay</strong>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script src="data.js"></script>
+  <script src="wishlist.js"></script>
+  <script src="main.js"></script>
+  <script src="product.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>
