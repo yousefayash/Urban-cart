@@ -136,10 +136,16 @@ function initSignInForm() {
     }
 
     if (valid) {
-      showFormSuccess('Sign in successful! Redirecting...', form);
-      setTimeout(function () {
-        window.location.href = 'index.html';
-      }, 1500);
+      var email = emailInput.value.trim().toLowerCase();
+      var isAdmin = email === 'admin@example.com' && passwordInput.value === 'admin123456';
+      if (isAdmin) {
+        localStorage.setItem('urbancart_admin_session', 'active');
+        showFormSuccess('Admin sign in successful! Opening dashboard...', form);
+        setTimeout(function () { window.location.href = 'admin.html'; }, 900);
+      } else {
+        showFormSuccess('Sign in successful! Redirecting...', form);
+        setTimeout(function () { window.location.href = 'index.html'; }, 1500);
+      }
     }
   });
 }
@@ -205,6 +211,16 @@ function initSignUpForm() {
     }
 
     if (valid) {
+      var accountEmail = emailInput.value.trim().toLowerCase();
+      var accountProfile = {
+        name: nameInput.value.trim(),
+        email: accountEmail,
+        phone: '',
+        city: '',
+        address: ''
+      };
+      localStorage.setItem('urbancart_profile', JSON.stringify(accountProfile));
+      localStorage.setItem('urbancart_account_session', 'active');
       showFormSuccess('Account created successfully! Redirecting...', form);
       setTimeout(function () {
         window.location.href = 'signin.html';

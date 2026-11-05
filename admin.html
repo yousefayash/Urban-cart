@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Urban Cart administrator dashboard">
+  <title>Urban Cart · Admin Dashboard</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body">
+  <main class="admin-shell">
+    <section class="admin-login" id="admin-login-view" aria-labelledby="admin-login-title">
+      <a class="admin-brand" href="index.html"><span class="brand-mark">U</span><span>Urban Cart</span></a>
+      <div class="login-card">
+        <span class="eyebrow">Restricted area</span>
+        <h1 id="admin-login-title">Welcome back, Admin</h1>
+        <p class="login-copy">Sign in to manage orders, products, and store activity.</p>
+        <form id="admin-login-form" novalidate>
+          <label for="admin-email">Email address</label>
+          <input id="admin-email" name="email" type="email" autocomplete="username" placeholder="admin@example.com" required>
+          <label for="admin-password">Password</label>
+          <input id="admin-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+          <p class="form-error" id="admin-login-error" role="alert" hidden></p>
+          <button class="admin-button admin-button-primary admin-button-block" type="submit">Sign in to dashboard</button>
+        </form>
+        <a class="back-link" href="index.html">← Back to storefront</a>
+      </div>
+    </section>
+
+    <section class="admin-dashboard" id="admin-dashboard-view" hidden>
+      <header class="dashboard-topbar">
+        <a class="admin-brand" href="index.html"><span class="brand-mark">U</span><span>Urban Cart <small>ADMIN</small></span></a>
+        <div class="topbar-actions">
+          <a class="storefront-link" href="index.html">View storefront ↗</a>
+          <button class="logout-button" id="admin-logout" type="button">Log out</button>
+        </div>
+      </header>
+
+      <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+          <div class="admin-profile"><div class="avatar">A</div><div><strong>Urban Admin</strong><span>Administrator</span></div></div>
+          <nav class="admin-nav" aria-label="Admin navigation">
+            <a class="active" href="#overview">Overview</a>
+            <a href="#orders">Orders</a>
+            <a href="#products">Products</a>
+            <a href="#customers">Customers</a>
+          </nav>
+          <div class="sidebar-note"><strong>Store status</strong><span><i></i> Online and accepting orders</span></div>
+        </aside>
+
+        <div class="dashboard-content">
+          <section id="overview" class="dashboard-heading">
+            <div><span class="eyebrow">Store overview</span><h1>Good morning, Admin</h1><p>Here is what is happening with your store today.</p></div>
+            <span class="date-chip" id="dashboard-date"></span>
+          </section>
+
+          <section class="stats-grid" aria-label="Store statistics">
+            <article class="stat-card stat-revenue"><span class="stat-icon">↗</span><p>Total revenue</p><strong id="stat-revenue">EGB 0.00</strong><span class="stat-meta">From all orders</span></article>
+            <article class="stat-card stat-orders"><span class="stat-icon">▣</span><p>Total orders</p><strong id="stat-orders">0</strong><span class="stat-meta">All-time orders</span></article>
+            <article class="stat-card stat-products"><span class="stat-icon">◈</span><p>Products</p><strong id="stat-products">0</strong><span class="stat-meta">In your catalog</span></article>
+            <article class="stat-card stat-customers"><span class="stat-icon">◎</span><p>Customers</p><strong id="stat-customers">0</strong><span class="stat-meta">Unique shoppers</span></article>
+          </section>
+
+          <section class="content-card" id="orders">
+            <div class="card-heading"><div><span class="eyebrow">Latest activity</span><h2>Recent orders</h2></div><span class="record-count" id="orders-count">0 orders</span></div>
+            <div class="table-wrap"><table class="admin-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody id="orders-table"></tbody></table></div>
+            <div class="empty-state" id="orders-empty" hidden><span>⌁</span><strong>No orders yet</strong><p>Orders placed from the storefront will appear here.</p></div>
+          </section>
+
+          <section class="content-card" id="products">
+            <div class="card-heading"><div><span class="eyebrow">Catalog</span><h2>Product inventory</h2></div><div class="table-tools"><input id="product-search" type="search" placeholder="Search products..." aria-label="Search products"><span class="record-count" id="products-count">0 products</span></div></div>
+            <div class="table-wrap"><table class="admin-table"><thead><tr><th>Product</th><th>Category</th><th>SKU</th><th>Price</th><th>Stock</th></tr></thead><tbody id="products-table"></tbody></table></div>
+          </section>
+
+          <section class="content-card" id="customers">
+            <div class="card-heading"><div><span class="eyebrow">Customer insights</span><h2>Recent customers</h2></div></div>
+            <div class="customer-list" id="customers-list"></div>
+            <div class="empty-state compact" id="customers-empty" hidden><strong>No customer activity yet</strong><p>Customer details will appear after the first order.</p></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="data.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

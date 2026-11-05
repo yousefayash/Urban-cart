@@ -21,6 +21,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'development-only-change-me';
 if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'development-only-change-me') throw new Error('JWT_SECRET must be set in production');
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
     const email = process.env.ADMIN_EMAIL.toLowerCase().trim();
+    const existing = db.prepare('SELECT id FROM users WHERE email=?').get(email);
     if (!existing) db.prepare("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,'admin')").run(process.env.ADMIN_NAME || 'Urban Cart Admin', email, await bcrypt.hash(process.env.ADMIN_PASSWORD, 12));
 }
 app.use(helmet());

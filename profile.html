@@ -31,20 +31,20 @@
             </div>
             <div class="profile-grid">
                 <aside class="page-card">
-                    <div class="avatar">U</div>
+                    <div class="avatar" id="profile-avatar">U</div>
                     <h2 style="text-align:center;margin:15px 0 5px" id="profile-name-side">Urban Customer</h2>
-                    <p class="muted" style="text-align:center">Customer account</p>
+                    <p class="muted" style="text-align:center" id="profile-account-type">Customer account</p>
                     <nav class="account-nav" style="margin-top:22px"><a class="active" href="profile.html">Profile</a><a href="orders.html">Orders History</a><a href="wishlist.html">Wishlist</a><a href="cart.html">Cart</a></nav>
                 </aside>
                 <section class="page-card">
                     <h2>Profile information</h2>
                     <form id="profile-form" style="margin-top:20px">
                         <div class="form-grid">
-                            <div class="field"><label>Full Name</label><input id="profile-name" required value="Urban Customer"></div>
-                            <div class="field"><label>Email</label><input id="profile-email" type="email" required value="customer@example.com"></div>
-                            <div class="field"><label>Phone</label><input id="profile-phone" value="01000000000"></div>
-                            <div class="field"><label>City</label><input id="profile-city" value="Cairo"></div>
-                            <div class="field full"><label>Address</label><textarea id="profile-address" rows="3">Egypt</textarea></div>
+                            <div class="field"><label>Full Name</label><input id="profile-name" required placeholder="Your full name"></div>
+                            <div class="field"><label>Email</label><input id="profile-email" type="email" required placeholder="you@example.com"></div>
+                            <div class="field"><label>Phone</label><input id="profile-phone" placeholder="Your phone number"></div>
+                            <div class="field"><label>City</label><input id="profile-city" placeholder="Your city"></div>
+                            <div class="field full"><label>Address</label><textarea id="profile-address" rows="3" placeholder="Your delivery address"></textarea></div>
                         </div><button class="btn btn-primary" type="submit">Save Profile</button>
                         <p id="profile-message" class="muted" style="margin-top:12px"></p>
                     </form>

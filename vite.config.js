@@ -21,7 +21,9 @@ export default defineConfig({
         signin: page('signin.html'),
         signup: page('signup.html'),
         forgotPassword: page('forgot-password.html'),
-        resetPassword: page('reset-password.html')
+        resetPassword: page('reset-password.html'),
+        admin: page('admin.html'),
+        profile: page('profile.html')
       }
     }
   }

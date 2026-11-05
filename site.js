@@ -133,14 +133,29 @@
             });
         } catch (e) {}
     }
+    function syncAccountLink() {
+        var isAdmin = localStorage.getItem('urbancart_admin_session') === 'active';
+        var hasProfile = !!localStorage.getItem('urbancart_profile');
+        var href = isAdmin ? 'admin.html' : (hasProfile ? 'profile.html' : 'signin.html');
+        var label = isAdmin ? 'Admin dashboard' : (hasProfile ? 'My profile' : 'Sign in');
+        document.querySelectorAll('.navbar-actions a[aria-label="Sign in"], .navbar-actions a[href="signin.html"], .navbar-actions a[href="profile.html"], .mobile-menu a[href="signin.html"], .mobile-menu a[href="profile.html"]').forEach(function(accountLink) {
+            accountLink.href = href;
+            accountLink.setAttribute('aria-label', label);
+            accountLink.title = label;
+        });
+    }
     document.addEventListener('DOMContentLoaded', function() {
         addThemeToggle();
         addNavLinks();
         bindSearch();
         bindHamburger();
         updateCounters();
+        syncAccountLink();
         applyTheme();
-        window.addEventListener('storage', updateCounters);
+        window.addEventListener('storage', function() {
+            updateCounters();
+            syncAccountLink();
+        });
     });
     window.updateSiteCounters = updateCounters;
 })();
