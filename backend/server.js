@@ -17,6 +17,7 @@ import {
 } from './db.js';
 
 const app = express();
+app.set('trust proxy', 1);
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
