@@ -9,6 +9,8 @@ lerna-debug.log*
 
 # Environment and sensitive data
 .env
+.env.*
+!.env.example
 
 # Database
 backend/data/
@@ -31,3 +33,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.neon
+node_modules/

@@ -1,26 +1,31 @@
-import Database from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
 
-const dataDir = path.resolve(process.env.DATA_DIR || './data');
-fs.mkdirSync(dataDir, {
-    recursive: true
+import 'dotenv/config';
+import fs from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import pg from 'pg';
+
+const { Pool } = pg;
+
+if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required. Add your Neon connection string to the environment.');
+}
+
+export const db = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
 });
-export const db = new Database(process.env.DATABASE_PATH || path.join(dataDir, 'urban-cart.sqlite'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-db.exec(`
-CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'customer' CHECK(role IN ('customer','admin')), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, slug TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', category TEXT NOT NULL, price REAL NOT NULL CHECK(price >= 0), old_price REAL, image TEXT, brand TEXT, sku TEXT UNIQUE, stock INTEGER NOT NULL DEFAULT 0, rating REAL NOT NULL DEFAULT 0, reviews_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS cart_items (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, product_id INTEGER NOT NULL REFERENCES products(id), quantity INTEGER NOT NULL CHECK(quantity > 0), PRIMARY KEY(user_id, product_id));
-CREATE TABLE IF NOT EXISTS wishlists (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, product_id INTEGER NOT NULL REFERENCES products(id), PRIMARY KEY(user_id, product_id));
-CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id), status TEXT NOT NULL DEFAULT 'pending', payment_status TEXT NOT NULL DEFAULT 'pending', total REAL NOT NULL, shipping_address TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS order_items (order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, product_id INTEGER NOT NULL, name TEXT NOT NULL, price REAL NOT NULL, quantity INTEGER NOT NULL, PRIMARY KEY(order_id, product_id));
-CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE, rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5), comment TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, product_id));
-`);
+
+db.on('error', (error) => {
+    console.error('Unexpected PostgreSQL pool error:', error);
+});
 
 export function publicUser(user) {
+    if (!user) return null;
+
     return {
         id: user.id,
         name: user.name,
@@ -29,47 +34,259 @@ export function publicUser(user) {
         createdAt: user.created_at
     };
 }
-export function productView(p) {
-    return p ? {
-        ...p,
-        oldPrice: p.old_price,
-        reviews: p.reviews_count
-    } : p;
+
+export function productView(product) {
+    if (!product) return null;
+
+    return {
+        ...product,
+        oldPrice: product.old_price,
+        reviews: product.reviews_count,
+        isNew: product.is_new,
+        thumbnail2: product.thumbnail2,
+        thumbnail3: product.thumbnail3,
+        thumbnail4: product.thumbnail4
+    };
 }
-export function orderView(order) {
+
+export async function orderView(order) {
     if (!order) return null;
-    const items = db.prepare('SELECT product_id as id, name, price, quantity FROM order_items WHERE order_id=?').all(order.id);
+
+    const result = await db.query(
+        `SELECT product_id AS id, name, price, quantity
+         FROM order_items
+         WHERE order_id = $1
+         ORDER BY product_id`,
+        [order.id]
+    );
+
     return {
         ...order,
         shippingAddress: order.shipping_address,
         paymentStatus: order.payment_status,
         createdAt: order.created_at,
-        items
+        items: result.rows
     };
 }
 
-export function seedCatalog() {
-    const count = db.prepare('SELECT COUNT(*) n FROM products').get().n;
-    if (count) return;
-    const file = fs.readFileSync(path.resolve('data.js'), 'utf8');
-    const source = file.replace(/^.*?const PRODUCTS\s*=\s*/, '').replace(/;\s*$/s, '');
-    let products = [];
-    try {
-        products = Function(`"use strict"; return (${source})`)();
-    } catch {
-        products = [];
-    }
-    const insertCategory = db.prepare('INSERT OR IGNORE INTO categories(name,slug) VALUES (?,?)');
-    const insert = db.prepare('INSERT OR IGNORE INTO products(id,name,description,category,price,old_price,image,brand,sku,stock,rating,reviews_count) VALUES (@id,@name,@description,@category,@price,@oldPrice,@image,@brand,@sku,@stock,@rating,@reviews)');
-    const tx = db.transaction(() => products.forEach(p => {
-        insertCategory.run(p.category, p.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-        insert.run({
-            ...p,
-            oldPrice: p.oldPrice ?? null,
-            stock: p.stock === 'In Stock' ? 25 : 0,
-            reviews: p.reviews || 0
-        });
-    }));
-    tx();
+async function createTables() {
+    await db.query(`
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'customer'
+                CHECK (role IN ('customer', 'admin')),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            slug TEXT NOT NULL UNIQUE,
+            description TEXT NOT NULL DEFAULT '',
+            image TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL,
+            price NUMERIC(12, 2) NOT NULL CHECK (price >= 0),
+            old_price NUMERIC(12, 2),
+            discount INTEGER NOT NULL DEFAULT 0,
+            image TEXT,
+            thumbnail2 TEXT,
+            thumbnail3 TEXT,
+            thumbnail4 TEXT,
+            badge TEXT,
+            brand TEXT,
+            sku TEXT UNIQUE,
+            stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+            rating NUMERIC(3, 2) NOT NULL DEFAULT 0,
+            reviews_count INTEGER NOT NULL DEFAULT 0,
+            is_new BOOLEAN NOT NULL DEFAULT FALSE,
+            specifications JSONB NOT NULL DEFAULT '{}'::jsonb,
+            tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+            shipping TEXT NOT NULL DEFAULT '',
+            returns TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS cart_items (
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+            quantity INTEGER NOT NULL CHECK (quantity > 0),
+            PRIMARY KEY (user_id, product_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS wishlists (
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+            PRIMARY KEY (user_id, product_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            status TEXT NOT NULL DEFAULT 'pending',
+            payment_status TEXT NOT NULL DEFAULT 'pending',
+            total NUMERIC(12, 2) NOT NULL,
+            shipping_address TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS order_items (
+            order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+            product_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            price NUMERIC(12, 2) NOT NULL,
+            quantity INTEGER NOT NULL,
+            PRIMARY KEY (order_id, product_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS reviews (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+            rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+            comment TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (user_id, product_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_products_category
+            ON products(category);
+
+        CREATE INDEX IF NOT EXISTS idx_orders_user
+            ON orders(user_id);
+
+        CREATE INDEX IF NOT EXISTS idx_reviews_product
+            ON reviews(product_id);
+    `);
 }
-seedCatalog();
+
+function readCatalog() {
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const catalogPath = path.resolve(currentDir, '../data.js');
+
+    const source = fs.readFileSync(catalogPath, 'utf8');
+
+    // Run the existing browser catalog in an isolated context.
+    // The final expression exposes PRODUCTS and CATEGORIES to Node.
+    return runInNewContext(
+        `${source}\n;({ PRODUCTS, CATEGORIES })`,
+        {}
+    );
+}
+
+async function seedCatalog() {
+    const countResult = await db.query(
+        'SELECT COUNT(*)::int AS count FROM products'
+    );
+
+    // Do not overwrite an existing catalog.
+    if (countResult.rows[0].count > 0) return;
+
+    const { PRODUCTS, CATEGORIES } = readCatalog();
+
+    const client = await db.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        for (const category of CATEGORIES) {
+            const slug = category.name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            await client.query(
+                `INSERT INTO categories (name, slug, description, image)
+                 VALUES ($1, $2, $3, $4)
+                 ON CONFLICT (name) DO NOTHING`,
+                [
+                    category.name,
+                    slug,
+                    category.description || '',
+                    category.image || null
+                ]
+            );
+        }
+
+        for (const product of PRODUCTS) {
+            const stock = product.stock === 'In Stock'
+                ? 25
+                : Number(product.stock) || 0;
+
+            await client.query(
+                `INSERT INTO products (
+                    id, name, description, category, price, old_price,
+                    discount, image, thumbnail2, thumbnail3, thumbnail4,
+                    badge, brand, sku, stock, rating, reviews_count,
+                    is_new, specifications, tags, shipping, returns
+                )
+                VALUES (
+                    $1, $2, $3, $4, $5, $6,
+                    $7, $8, $9, $10, $11,
+                    $12, $13, $14, $15, $16, $17,
+                    $18, $19::jsonb, $20::jsonb, $21, $22
+                )
+                ON CONFLICT (id) DO NOTHING`,
+                [
+                    product.id,
+                    product.name,
+                    product.description || '',
+                    product.category,
+                    product.price,
+                    product.oldPrice ?? null,
+                    product.discount || 0,
+                    product.image || null,
+                    product.thumbnail2 || null,
+                    product.thumbnail3 || null,
+                    product.thumbnail4 || null,
+                    product.badge || null,
+                    product.brand || '',
+                    product.sku || null,
+                    stock,
+                    product.rating || 0,
+                    product.reviews || 0,
+                    Boolean(product.isNew),
+                    JSON.stringify(product.specifications || {}),
+                    JSON.stringify(product.tags || []),
+                    product.shipping || '',
+                    product.returns || ''
+                ]
+            );
+        }
+
+        // Keep identity values above the seeded IDs.
+        await client.query(`
+            SELECT setval(
+                pg_get_serial_sequence('products', 'id'),
+                COALESCE((SELECT MAX(id) FROM products), 1),
+                true
+            )
+        `);
+
+        await client.query('COMMIT');
+
+        console.log(
+            `Catalog seeded: ${PRODUCTS.length} products, ${CATEGORIES.length} categories`
+        );
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+export async function initDb() {
+    await createTables();
+    await seedCatalog();
+    console.log('Neon PostgreSQL database is ready.');
+}
