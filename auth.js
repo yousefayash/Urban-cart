@@ -200,19 +200,7 @@
   }
 
   function initPasswordRecovery() {
-    var forgot = document.getElementById('forgot-password-form');
     var reset = document.getElementById('reset-password-form');
-
-    if (forgot) {
-      forgot.addEventListener('submit', function (event) {
-        event.preventDefault();
-        showMessage(
-          forgot,
-          'Password recovery is temporarily unavailable. Please contact support.',
-          false
-        );
-      });
-    }
 
     if (reset) {
       reset.addEventListener('submit', function (event) {
