@@ -11,7 +11,7 @@ const { Pool } = pg;
 if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL is required. Add your Neon connection string to the environment.');
 }
-
+console.log('Database host:', new URL(process.env.DATABASE_URL).hostname);
 export const db = new Pool({
     connectionString: process.env.DATABASE_URL,
     max: 5,
