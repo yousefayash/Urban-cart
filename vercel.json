@@ -1,8 +1,8 @@
-
 {
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "regions": ["iad1"]
 }
