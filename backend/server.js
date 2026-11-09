@@ -172,21 +172,34 @@ const databaseReady = (async () => {
             [email]
         );
 
-        if (existing.rowCount === 0) {
-            const passwordHash = await bcrypt.hash(password, 12);
+       const passwordHash = await bcrypt.hash(password, 12);
 
-            await db.query(
-                `INSERT INTO users (name, email, password_hash, role)
-                 VALUES ($1, $2, $3, 'admin')`,
-                [
-                    process.env.ADMIN_NAME || 'Urban Cart Admin',
-                    email,
-                    passwordHash
-                ]
-            );
+if (existing.rowCount === 0) {
+    await db.query(
+        `INSERT INTO users (name, email, password_hash, role)
+         VALUES ($1, $2, $3, 'admin')`,
+        [
+            process.env.ADMIN_NAME || 'Urban Cart Admin',
+            email,
+            passwordHash
+        ]
+    );
+} else {
+    await db.query(
+        `UPDATE users
+         SET name = $1,
+             password_hash = $2,
+             role = 'admin'
+         WHERE email = $3`,
+        [
+            process.env.ADMIN_NAME || 'Urban Cart Admin',
+            passwordHash,
+            email
+        ]
+    );
+}
 
-            console.log('Initial admin account created.');
-        }
+console.log('Admin account configured.');
     });
 })();
 
