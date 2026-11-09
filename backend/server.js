@@ -716,6 +716,21 @@ app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
              FROM orders WHERE payment_status = 'paid'`
         )
     ]);
+    
+    app.get('/api/admin/orders', auth, admin, asyncRoute(async (req, res) => {
+    const result = await db.query(
+        `SELECT *
+         FROM orders
+         ORDER BY created_at DESC
+         LIMIT 100`
+    );
+
+    const orders = await Promise.all(
+        result.rows.map(order => orderView(order))
+    );
+
+    res.json({ orders });
+}));
 
     res.json({
         users: users.rows[0].count,

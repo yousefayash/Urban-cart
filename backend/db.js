@@ -120,23 +120,38 @@ export function productView(product) {
 export async function orderView(order) {
     if (!order) return null;
 
-    const result = await db.query(
-        `SELECT product_id AS id, name, price, quantity
-         FROM order_items
-         WHERE order_id = $1
-         ORDER BY product_id`,
-        [order.id]
-    );
+    const [itemsResult, userResult] = await Promise.all([
+        db.query(
+            `SELECT product_id AS id, name, price, quantity
+             FROM order_items
+             WHERE order_id = $1
+             ORDER BY product_id`,
+            [order.id]
+        ),
+        db.query(
+            `SELECT name, email
+             FROM users
+             WHERE id = $1`,
+            [order.user_id]
+        )
+    ]);
+
+    const user = userResult.rows[0] || {};
 
     return {
         ...order,
+        customer: {
+            name: user.name || 'Customer',
+            email: user.email || '',
+            address: order.shipping_address || ''
+        },
         shippingAddress: order.shipping_address,
         paymentStatus: order.payment_status,
         createdAt: order.created_at,
-        items: result.rows
+        date: order.created_at,
+        items: itemsResult.rows
     };
 }
-
 async function createTables() {
     await db.query(`
         CREATE TABLE IF NOT EXISTS users (
