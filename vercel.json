@@ -1,8 +1,19 @@
+
 {
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "outputDirectory": "dist",
   "framework": "vite",
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "rewrites": [
+    {
+      "source": "/api",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    }
+  ]
 }
