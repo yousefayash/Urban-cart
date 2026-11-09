@@ -4,24 +4,92 @@ import fs from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import pg from 'pg';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 
-const { Pool } = pg;
+neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is required. Add your Neon connection string to the environment.');
+    throw new Error(
+        'DATABASE_URL is required. Add your Neon connection string to the environment.'
+    );
 }
-console.log('Database host:', new URL(process.env.DATABASE_URL).hostname);
-export const db = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 5,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000
-});
 
-db.on('error', (error) => {
-    console.error('Unexpected PostgreSQL pool error:', error);
-});
+console.log('Database host:', new URL(process.env.DATABASE_URL).hostname);
+
+const databaseContext = new AsyncLocalStorage();
+
+function createPool() {
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        max: 5,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 15000
+    });
+
+    pool.on('error', (error) => {
+        console.error('Unexpected Neon pool error:', error);
+    });
+
+    return pool;
+}
+
+function getCurrentPool() {
+    const pool = databaseContext.getStore();
+
+    if (!pool) {
+        throw new Error(
+            'Database pool is not available in the current request.'
+        );
+    }
+
+    return pool;
+}
+
+// Keep the existing db.query() and db.connect() interface.
+export const db = {
+    query(...args) {
+        return getCurrentPool().query(...args);
+    },
+
+    connect() {
+        return getCurrentPool().connect();
+    }
+};
+
+// Create and close a separate pool for every incoming request.
+export async function withDatabasePool(callback) {
+    const pool = createPool();
+
+    try {
+        return await databaseContext.run(pool, callback);
+    } finally {
+        await pool.end();
+    }
+}
+export function createDatabaseRequestMiddleware(req, res, next) {
+    const pool = createPool();
+
+    let closing = null;
+
+    const closePool = () => {
+        if (!closing) {
+            closing = pool.end().catch((error) => {
+                console.error('Failed to close Neon pool:', error);
+            });
+        }
+
+        return closing;
+    };
+
+    res.once('finish', closePool);
+    res.once('close', closePool);
+
+    databaseContext.run(pool, () => {
+        next();
+    });
+}
 
 export function publicUser(user) {
     if (!user) return null;
@@ -175,8 +243,6 @@ function readCatalog() {
 
     const source = fs.readFileSync(catalogPath, 'utf8');
 
-    // Run the existing browser catalog in an isolated context.
-    // The final expression exposes PRODUCTS and CATEGORIES to Node.
     return runInNewContext(
         `${source}\n;({ PRODUCTS, CATEGORIES })`,
         {}
@@ -263,7 +329,6 @@ async function seedCatalog() {
             );
         }
 
-        // Keep identity values above the seeded IDs.
         await client.query(`
             SELECT setval(
                 pg_get_serial_sequence('products', 'id'),
@@ -286,7 +351,16 @@ async function seedCatalog() {
 }
 
 export async function initDb() {
-    await createTables();
-    await seedCatalog();
-    console.log('Neon PostgreSQL database is ready.');
+    const pool = createPool();
+
+    try {
+        await databaseContext.run(pool, async () => {
+            await createTables();
+            await seedCatalog();
+        });
+
+        console.log('Neon PostgreSQL database is ready.');
+    } finally {
+        await pool.end();
+    }
 }

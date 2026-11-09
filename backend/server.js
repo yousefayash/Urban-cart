@@ -5,6 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
 
@@ -13,7 +14,9 @@ import {
     initDb,
     publicUser,
     productView,
-    orderView
+    orderView,
+    createDatabaseRequestMiddleware,
+    withDatabasePool
 } from './db.js';
 
 const app = express();
@@ -30,6 +33,92 @@ if (!JWT_SECRET) {
 }
 
 const tokenSecret = JWT_SECRET || 'local-development-secret-change-this';
+// Validation schemas
+const registerSchema = z.object({
+    name: z.string().trim().min(2).max(100),
+    email: z.string().trim().email().max(255),
+    password: z.string().min(8).max(128)
+});
+
+const loginSchema = z.object({
+    email: z.string().trim().email().max(255),
+    password: z.string().min(1).max(128)
+});
+
+const productSchema = z.object({
+    name: z.string().trim().min(2).max(200),
+    description: z.string().trim().min(5).max(5000),
+    category: z.string().trim().min(2).max(100),
+    price: z.number().positive(),
+    oldPrice: z.number().positive().optional(),
+    image: z.string().url().optional(),
+    brand: z.string().trim().min(1).max(100),
+    sku: z.string().trim().max(100).optional(),
+    stock: z.number().int().min(0)
+});
+
+// Middleware helpers
+function validate(schema) {
+    return (req, res, next) => {
+        const result = schema.safeParse(req.body);
+
+        if (!result.success) {
+            return res.status(400).json({
+                error: 'Invalid request data',
+                details: result.error.issues.map(issue => ({
+                    field: issue.path.join('.'),
+                    message: issue.message
+                }))
+            });
+        }
+
+        req.body = result.data;
+        next();
+    };
+}
+
+function asyncRoute(handler) {
+    return (req, res, next) => {
+        Promise.resolve(handler(req, res, next)).catch(next);
+    };
+}
+
+function getId(value) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function sign(user) {
+    return jwt.sign(
+        { sub: user.id, role: user.role },
+        tokenSecret,
+        { expiresIn: '7d' }
+    );
+}
+
+function auth(req, res, next) {
+    const header = req.headers.authorization || '';
+    const [scheme, token] = header.split(' ');
+
+    if (scheme !== 'Bearer' || !token) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+        req.auth = jwt.verify(token, tokenSecret);
+        next();
+    } catch {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+}
+
+function admin(req, res, next) {
+    if (req.auth?.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    next();
+}
 
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
     .split(',')
@@ -59,9 +148,14 @@ app.use(rateLimit({
 }));
 
 // Initialize Neon once, then wait for it before handling API requests.
-const databaseReady = initDb().then(async () => {
+// Initialize Neon and create the initial admin account.
+const databaseReady = (async () => {
+    await initDb();
+
     if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
-        console.warn('ADMIN_EMAIL or ADMIN_PASSWORD is not configured. No admin account was created.');
+        console.warn(
+            'ADMIN_EMAIL or ADMIN_PASSWORD is not configured. No admin account was created.'
+        );
         return;
     }
 
@@ -72,25 +166,39 @@ const databaseReady = initDb().then(async () => {
         throw new Error('ADMIN_PASSWORD must be at least 12 characters.');
     }
 
-    const existing = await db.query(
-        'SELECT id FROM users WHERE email = $1',
-        [email]
-    );
-
-    if (existing.rowCount === 0) {
-        const passwordHash = await bcrypt.hash(password, 12);
-
-        await db.query(
-            `INSERT INTO users (name, email, password_hash, role)
-             VALUES ($1, $2, $3, 'admin')`,
-            [process.env.ADMIN_NAME || 'Urban Cart Admin', email, passwordHash]
+    await withDatabasePool(async () => {
+        const existing = await db.query(
+            'SELECT id FROM users WHERE email = $1',
+            [email]
         );
 
-        console.log('Initial admin account created.');
-    }
-});
+        if (existing.rowCount === 0) {
+            const passwordHash = await bcrypt.hash(password, 12);
 
+            await db.query(
+                `INSERT INTO users (name, email, password_hash, role)
+                 VALUES ($1, $2, $3, 'admin')`,
+                [
+                    process.env.ADMIN_NAME || 'Urban Cart Admin',
+                    email,
+                    passwordHash
+                ]
+            );
+
+            console.log('Initial admin account created.');
+        }
+    });
+})();
+
+// Attach a separate Neon pool to every incoming request.
+app.use(createDatabaseRequestMiddleware);
+
+// Wait for database initialization before handling normal API requests.
 app.use(async (req, res, next) => {
+    if (req.path === '/api/health') {
+        return next();
+    }
+
     try {
         await databaseReady;
         next();
@@ -100,97 +208,31 @@ app.use(async (req, res, next) => {
     }
 });
 
-const asyncRoute = handler => (req, res, next) => {
-    Promise.resolve(handler(req, res, next)).catch(next);
-};
+// Health
+// Health
+app.get('/api/health', async (req, res) => {
+    try {
+        const result = await db.query('SELECT 1 AS ok');
 
-const validate = (schema, source = 'body') => (req, res, next) => {
-    const parsed = schema.safeParse(req[source]);
+        if (Number(result.rows[0]?.ok) !== 1) {
+            throw new Error('Database health check failed.');
+        }
 
-    if (!parsed.success) {
-        return res.status(400).json({
-            error: 'Validation failed',
-            details: parsed.error.flatten()
+        res.json({
+            status: 'ok',
+            service: 'urban-cart-api',
+            database: 'connected',
+            time: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Health check database failure:', error);
+
+        res.status(503).json({
+            status: 'error',
+            service: 'urban-cart-api',
+            database: 'unavailable'
         });
     }
-
-    req[source] = parsed.data;
-    next();
-};
-
-const sign = user => jwt.sign(
-    { sub: user.id, role: user.role },
-    tokenSecret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-);
-
-function auth(req, res, next) {
-    const header = req.headers.authorization || '';
-    const match = header.match(/^Bearer\s+(.+)$/i);
-
-    if (!match) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    try {
-        req.auth = jwt.verify(match[1], tokenSecret);
-        next();
-    } catch {
-        res.status(401).json({ error: 'Invalid or expired token' });
-    }
-}
-
-const admin = asyncRoute(async (req, res, next) => {
-    const result = await db.query(
-        'SELECT role FROM users WHERE id = $1',
-        [req.auth.sub]
-    );
-
-    if (!result.rows[0] || result.rows[0].role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    next();
-});
-
-const registerSchema = z.object({
-    name: z.string().trim().min(2).max(80),
-    email: z.string().trim().email().max(160),
-    password: z.string().min(8).max(128)
-});
-
-const loginSchema = z.object({
-    email: z.string().trim().email().max(160),
-    password: z.string().min(1).max(128)
-});
-
-const productSchema = z.object({
-    name: z.string().trim().min(2).max(180),
-    description: z.string().max(5000).default(''),
-    category: z.string().trim().min(1).max(80),
-    price: z.number().nonnegative(),
-    oldPrice: z.number().nonnegative().nullable().optional(),
-    image: z.string().url().nullable().optional(),
-    brand: z.string().max(80).default(''),
-    sku: z.string().max(80).nullable().optional(),
-    stock: z.number().int().nonnegative().default(0)
-});
-
-const idSchema = z.coerce.number().int().positive();
-
-function getId(value) {
-    const parsed = idSchema.safeParse(value);
-    return parsed.success ? parsed.data : null;
-}
-
-// Health
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        service: 'urban-cart-api',
-        database: 'postgresql',
-        time: new Date().toISOString()
-    });
 });
 
 // Authentication
