@@ -73,8 +73,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             localStorage.removeItem('urbancart_cart');
             if (typeof updateCartCounter === 'function') updateCartCounter();
-            localStorage.setItem('urbancart_last_order', String(data.order.id));
-            location.href = 'order-success.html?id=' + encodeURIComponent(data.order.id);
+            localStorage.setItem('urbancart_last_order', String(data.id));
+            location.href = 'order-success.html?id=' + encodeURIComponent(data.id);
         } catch (err) {
             showToast('Network error. Please try again.', 'error');
             if (submitBtn) submitBtn.disabled = false;

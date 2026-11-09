@@ -6,7 +6,6 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
 
@@ -335,73 +334,9 @@ app.post('/api/auth/login', authLimiter, validate(loginSchema), asyncRoute(async
     });
 }));
 
-// Password reset request (generates a one-time token)
-app.post('/api/auth/password-reset/request', authLimiter, validate(z.object({
-    email: z.string().trim().email().max(255)
-})), asyncRoute(async (req, res) => {
-    const email = req.body.email.toLowerCase();
-
-    const result = await db.query(
-        'SELECT id FROM users WHERE email = $1',
-        [email]
-    );
-
-    // Always return success to prevent email enumeration
-    if (!result.rows[0]) {
-        return res.json({ message: 'If that email exists, a reset link has been sent.' });
-    }
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    await db.query(
-        `INSERT INTO password_resets (user_id, token, expires_at)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO UPDATE SET token = EXCLUDED.token, expires_at = EXCLUDED.expires_at`,
-        [result.rows[0].id, token, expiresAt]
-    );
-
-    // In production, send email via your mail provider. For now, log only in dev.
-    if (process.env.NODE_ENV !== 'production') {
-        console.log(`Password reset token for ${email}: ${token}`);
-    }
-
-    res.json({ message: 'If that email exists, a reset link has been sent.' });
-}));
-
-// Password reset confirmation
-app.post('/api/auth/password-reset/confirm', authLimiter, validate(z.object({
-    token: z.string().trim().min(1),
-    password: z.string().min(8).max(128)
-})), asyncRoute(async (req, res) => {
-    const { token, password } = req.body;
-
-    const result = await db.query(
-        `SELECT * FROM password_resets
-         WHERE token = $1 AND expires_at > NOW()`,
-        [token]
-    );
-
-    const reset = result.rows[0];
-
-    if (!reset) {
-        return res.status(400).json({ error: 'Invalid or expired reset token' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    await db.query(
-        'UPDATE users SET password_hash = $1 WHERE id = $2',
-        [passwordHash, reset.user_id]
-    );
-
-    await db.query(
-        'DELETE FROM password_resets WHERE user_id = $1',
-        [reset.user_id]
-    );
-
-    res.json({ message: 'Password has been reset. You can now sign in.' });
-}));
+// Password reset is not available. An email delivery provider must be
+// configured before enabling these routes. The frontend currently shows
+// a "contact support" message instead of attempting reset flows.
 
 app.get('/api/auth/me', auth, asyncRoute(async (req, res) => {
     const result = await db.query(
