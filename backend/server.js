@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
 
@@ -125,7 +126,33 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
     .map(origin => origin.trim())
     .filter(Boolean);
 
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'"],
+            frameSrc: ["'none'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"]
+        }
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    },
+    noSniff: true,
+    frameguard: { action: 'deny' },
+    hidePoweredBy: true,
+    crossOriginResourcePolicy: { policy: 'same-origin' }
+}));
 
 app.use(cors({
     origin(origin, callback) {
@@ -135,17 +162,29 @@ app.use(cors({
 
         return callback(new Error('Origin not allowed by CORS'));
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json({ limit: '100kb' }));
 
-app.use(rateLimit({
+const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 300,
     standardHeaders: true,
-    legacyHeaders: false
-}));
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please try again later.' }
+});
+app.use(globalLimiter);
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many authentication attempts. Please try again later.' }
+});
 
 // Initialize Neon once, then wait for it before handling API requests.
 // Initialize Neon and create the initial admin account.
@@ -249,7 +288,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Authentication
-app.post('/api/auth/register', validate(registerSchema), asyncRoute(async (req, res) => {
+app.post('/api/auth/register', authLimiter, validate(registerSchema), asyncRoute(async (req, res) => {
     const name = req.body.name;
     const email = req.body.email.toLowerCase();
     const passwordHash = await bcrypt.hash(req.body.password, 12);
@@ -276,7 +315,7 @@ app.post('/api/auth/register', validate(registerSchema), asyncRoute(async (req, 
     }
 }));
 
-app.post('/api/auth/login', validate(loginSchema), asyncRoute(async (req, res) => {
+app.post('/api/auth/login', authLimiter, validate(loginSchema), asyncRoute(async (req, res) => {
     const email = req.body.email.toLowerCase();
 
     const result = await db.query(
@@ -296,6 +335,74 @@ app.post('/api/auth/login', validate(loginSchema), asyncRoute(async (req, res) =
     });
 }));
 
+// Password reset request (generates a one-time token)
+app.post('/api/auth/password-reset/request', authLimiter, validate(z.object({
+    email: z.string().trim().email().max(255)
+})), asyncRoute(async (req, res) => {
+    const email = req.body.email.toLowerCase();
+
+    const result = await db.query(
+        'SELECT id FROM users WHERE email = $1',
+        [email]
+    );
+
+    // Always return success to prevent email enumeration
+    if (!result.rows[0]) {
+        return res.json({ message: 'If that email exists, a reset link has been sent.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await db.query(
+        `INSERT INTO password_resets (user_id, token, expires_at)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id) DO UPDATE SET token = EXCLUDED.token, expires_at = EXCLUDED.expires_at`,
+        [result.rows[0].id, token, expiresAt]
+    );
+
+    // In production, send email via your mail provider. For now, log only in dev.
+    if (process.env.NODE_ENV !== 'production') {
+        console.log(`Password reset token for ${email}: ${token}`);
+    }
+
+    res.json({ message: 'If that email exists, a reset link has been sent.' });
+}));
+
+// Password reset confirmation
+app.post('/api/auth/password-reset/confirm', authLimiter, validate(z.object({
+    token: z.string().trim().min(1),
+    password: z.string().min(8).max(128)
+})), asyncRoute(async (req, res) => {
+    const { token, password } = req.body;
+
+    const result = await db.query(
+        `SELECT * FROM password_resets
+         WHERE token = $1 AND expires_at > NOW()`,
+        [token]
+    );
+
+    const reset = result.rows[0];
+
+    if (!reset) {
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await db.query(
+        'UPDATE users SET password_hash = $1 WHERE id = $2',
+        [passwordHash, reset.user_id]
+    );
+
+    await db.query(
+        'DELETE FROM password_resets WHERE user_id = $1',
+        [reset.user_id]
+    );
+
+    res.json({ message: 'Password has been reset. You can now sign in.' });
+}));
+
 app.get('/api/auth/me', auth, asyncRoute(async (req, res) => {
     const result = await db.query(
         'SELECT * FROM users WHERE id = $1',
@@ -304,6 +411,28 @@ app.get('/api/auth/me', auth, asyncRoute(async (req, res) => {
 
     if (!result.rows[0]) {
         return res.status(401).json({ error: 'User no longer exists' });
+    }
+
+    res.json({ user: publicUser(result.rows[0]) });
+}));
+
+// Profile update (self-service; customers can only update their own profile)
+app.put('/api/profile', auth, validate(z.object({
+    name: z.string().trim().min(2).max(100),
+    phone: z.string().trim().max(20).optional().default(''),
+    city: z.string().trim().max(100).optional().default(''),
+    address: z.string().trim().max(500).optional().default('')
+})), asyncRoute(async (req, res) => {
+    const result = await db.query(
+        `UPDATE users
+         SET name = $1
+         WHERE id = $2
+         RETURNING *`,
+        [req.body.name, req.auth.sub]
+    );
+
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'User not found' });
     }
 
     res.json({ user: publicUser(result.rows[0]) });
@@ -729,8 +858,16 @@ app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
              FROM orders WHERE payment_status = 'paid'`
         )
     ]);
-    
-    app.get('/api/admin/orders', auth, admin, asyncRoute(async (req, res) => {
+
+    res.json({
+        users: users.rows[0].count,
+        products: products.rows[0].count,
+        orders: orders.rows[0].count,
+        revenue: Number(revenue.rows[0].total)
+    });
+}));
+
+app.get('/api/admin/orders', auth, admin, asyncRoute(async (req, res) => {
     const result = await db.query(
         `SELECT *
          FROM orders
@@ -743,14 +880,6 @@ app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
     );
 
     res.json({ orders });
-}));
-
-    res.json({
-        users: users.rows[0].count,
-        products: products.rows[0].count,
-        orders: orders.rows[0].count,
-        revenue: Number(revenue.rows[0].total)
-    });
 }));
 
 app.post('/api/admin/products', auth, admin, validate(productSchema), asyncRoute(async (req, res) => {
@@ -777,6 +906,76 @@ app.post('/api/admin/products', auth, admin, validate(productSchema), asyncRoute
     );
 
     res.status(201).json(productView(result.rows[0]));
+}));
+
+app.get('/api/admin/products', auth, admin, asyncRoute(async (req, res) => {
+    const result = await db.query(
+        'SELECT * FROM products ORDER BY created_at DESC LIMIT 200'
+    );
+
+    res.json(result.rows.map(productView));
+}));
+
+app.put('/api/admin/products/:id', auth, admin, validate(productSchema), asyncRoute(async (req, res) => {
+    const productId = getId(req.params.id);
+
+    if (!productId) {
+        return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    const product = req.body;
+
+    const result = await db.query(
+        `UPDATE products
+         SET name = $1,
+             description = $2,
+             category = $3,
+             price = $4,
+             old_price = $5,
+             image = $6,
+             brand = $7,
+             sku = $8,
+             stock = $9
+         WHERE id = $10
+         RETURNING *`,
+        [
+            product.name,
+            product.description,
+            product.category,
+            product.price,
+            product.oldPrice ?? null,
+            product.image ?? null,
+            product.brand,
+            product.sku ?? null,
+            product.stock,
+            productId
+        ]
+    );
+
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.json(productView(result.rows[0]));
+}));
+
+app.delete('/api/admin/products/:id', auth, admin, asyncRoute(async (req, res) => {
+    const productId = getId(req.params.id);
+
+    if (!productId) {
+        return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    const result = await db.query(
+        'DELETE FROM products WHERE id = $1 RETURNING id',
+        [productId]
+    );
+
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.status(204).end();
 }));
 
 app.patch('/api/admin/orders/:id', auth, admin, validate(z.object({
