@@ -25,7 +25,7 @@ function createPool() {
         connectionString: process.env.DATABASE_URL,
         max: 5,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 15000
+        connectionTimeoutMillis: 60000
     });
 
     pool.on('error', (error) => {
