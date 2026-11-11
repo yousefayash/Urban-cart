@@ -1,5 +1,5 @@
 
-import 'dotenv/config';
+import './env.js';
 import fs from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import path from 'node:path';
@@ -15,8 +15,6 @@ if (!process.env.DATABASE_URL) {
         'DATABASE_URL is required. Add your Neon connection string to the environment.'
     );
 }
-
-console.log('Database host:', new URL(process.env.DATABASE_URL).hostname);
 
 const databaseContext = new AsyncLocalStorage();
 

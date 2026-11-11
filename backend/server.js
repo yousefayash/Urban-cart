@@ -1,5 +1,4 @@
 
-import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -9,6 +8,7 @@ import jwt from 'jsonwebtoken';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
 
+import { JWT_SECRET } from './env.js';
 import {
     db,
     initDb,
@@ -22,17 +22,10 @@ import {
 const app = express();
 app.set('trust proxy', 1);
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (process.env.NODE_ENV === 'production' && (!JWT_SECRET || JWT_SECRET.length < 32)) {
-    throw new Error('A JWT_SECRET of at least 32 characters is required in production.');
+if (typeof JWT_SECRET !== 'string' || JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET of at least 32 characters is required.');
 }
 
-if (!JWT_SECRET) {
-    console.warn('Using a development-only JWT secret. Set JWT_SECRET before deployment.');
-}
-
-const tokenSecret = JWT_SECRET || 'local-development-secret-change-this';
 // Validation schemas
 const registerSchema = z.object({
     name: z.string().trim().min(2).max(100),
@@ -91,7 +84,7 @@ function getId(value) {
 function sign(user) {
     return jwt.sign(
         { sub: user.id, role: user.role },
-        tokenSecret,
+        JWT_SECRET,
         { expiresIn: '7d' }
     );
 }
@@ -105,7 +98,7 @@ function auth(req, res, next) {
     }
 
     try {
-        req.auth = jwt.verify(token, tokenSecret);
+        req.auth = jwt.verify(token, JWT_SECRET);
         next();
     } catch {
         return res.status(401).json({ error: 'Invalid or expired token' });
