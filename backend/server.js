@@ -113,20 +113,46 @@ function admin(req, res, next) {
     next();
 }
 
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+const configuredOrigins = (process.env.FRONTEND_ORIGIN || '')
     .split(',')
-    .map(origin => origin.trim())
-    .filter(Boolean);
+    .map(value => value.trim())
+    .filter(Boolean)
+    .map(value => {
+        let parsed;
+        try { parsed = new URL(value); }
+        catch { throw new Error('FRONTEND_ORIGIN contains an invalid URL.'); }
+        if (parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+            throw new Error('FRONTEND_ORIGIN entries must be origins only, without paths or credentials.');
+        }
+        if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
+            throw new Error('FRONTEND_ORIGIN must use HTTPS in production.');
+        }
+        if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+            throw new Error('FRONTEND_ORIGIN must use HTTPS except for localhost development.');
+        }
+        return parsed.origin;
+    });
+
+const allowedOrigins = new Set(configuredOrigins);
+if (process.env.VERCEL_URL) {
+    allowedOrigins.add(`https://${process.env.VERCEL_URL}`);
+}
+if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.add('http://localhost:5173');
+    allowedOrigins.add('http://127.0.0.1:5173');
+}
+
 
 app.use(helmet({
     contentSecurityPolicy: {
         useDefaults: true,
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            imgSrc: ["'self'", "data:", "https:"],
+            imgSrc: ["'self'", "data:", "https://images.pexels.com", "https://images.unsplash.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            upgradeInsecureRequests: [],
             connectSrc: ["'self'"],
             frameSrc: ["'none'"],
             objectSrc: ["'none'"],
@@ -146,18 +172,28 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: 'same-origin' }
 }));
 
-app.use(cors({
-    origin(origin, callback) {
-        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
+app.use((req, res, next) => {
+    const requestOrigin = req.get('Origin');
+    const forwardedHost = req.get('x-forwarded-host') || req.get('host');
+    const forwardedProto = req.get('x-forwarded-proto') || req.protocol;
+    const isSameOrigin = Boolean(
+        requestOrigin && forwardedHost && requestOrigin === `${forwardedProto}://${forwardedHost}`
+    );
 
-        return callback(new Error('Origin not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+    cors({
+        origin(origin, callback) {
+            // No Origin means a non-browser client; same-origin and explicitly
+            // configured HTTPS frontends are the only browser origins allowed.
+            if (!origin) return callback(null, false);
+            return callback(null, isSameOrigin || allowedOrigins.has(origin));
+        },
+        // The API authenticates with Bearer tokens, not cross-site cookies.
+        credentials: false,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        maxAge: 600
+    })(req, res, next);
+});
 
 app.use(express.json({ limit: '100kb' }));
 

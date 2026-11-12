@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var cart = JSON.parse(localStorage.getItem('urbancart_cart') || '[]');
     var items = cart.map(function(i) {
         var p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(function(p) { return p.id === Number(i.id); }) : null;
-        return p ? Object.assign({}, p, { quantity: i.quantity }) : null;
+        var quantity = Math.max(1, Math.min(99, Number(i.quantity) || 1));
+        return p ? Object.assign({}, p, { quantity: quantity }) : null;
     }).filter(Boolean);
     var box = document.getElementById('checkout-items');
     var subtotal = items.reduce(function(t, i) { return t + i.price * i.quantity; }, 0);

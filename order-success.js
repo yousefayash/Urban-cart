@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         if (!response.ok) {
             if (detailsBox) {
-                detailsBox.innerHTML = '<p class="muted">' + (data.error || 'Order not found.') + '</p>';
+                detailsBox.textContent = data.error || 'Order not found.';
             }
             return;
         }
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         var customer = data.customer || {};
         var itemsHtml = (data.items || []).map(function(i) {
-            return '<div class="summary-line"><span>' + esc(i.name) + ' × ' + i.quantity + '</span><strong>EGB ' + Number(i.price).toFixed(2) + '</strong></div>';
+            return '<div class="summary-line"><span>' + esc(i.name) + ' × ' + Math.max(0, Number(i.quantity) || 0) + '</span><strong>EGB ' + Number(i.price).toFixed(2) + '</strong></div>';
         }).join('');
 
         if (detailsBox) {

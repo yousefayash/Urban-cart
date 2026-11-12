@@ -3,6 +3,19 @@
    Product details, gallery, reviews, related
    ============================================ */
 
+function escapeHTML(value) {
+  return String(value == null ? '' : value).replace(/[&<>\"']/g, function (char) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[char];
+  });
+}
+
+function safeProductImage(value) {
+  try {
+    var url = new URL(String(value || ''), window.location.origin);
+    return (url.protocol === 'https:' || (url.protocol === 'http:' && url.origin === window.location.origin)) ? url.href : '';
+  } catch (_) { return ''; }
+}
+
 /* ===== GET PRODUCT ID FROM URL ===== */
 function getProductIdFromUrl() {
   var params = new URLSearchParams(window.location.search);
@@ -57,20 +70,20 @@ function renderProductDetails() {
   var galleryHtml =
     '<div class="product-gallery">' +
     '<div class="product-main-image" id="main-image-container">' +
-    '<img src="' + product.image + '" alt="' + product.name + '" id="main-product-image" onerror="this.onerror=null;this.src=\'' + (typeof getProductFallback === 'function' ? getProductFallback(product) : '') + '\'">' +
+    '<img src="' + escapeHTML(safeProductImage(product.image)) + '" alt="' + escapeHTML(product.name) + '" id="main-product-image">' +
     '</div>' +
     '<div class="product-thumbnails">' +
-    '<div class="product-thumbnail active" data-src="' + product.image + '">' +
-    '<img src="' + product.image + '" alt="Thumbnail 1" onerror="this.onerror=null;this.src=\'' + (typeof getProductFallback === 'function' ? getProductFallback(product) : '') + '\'">' +
+    '<div class="product-thumbnail active" data-src="' + escapeHTML(safeProductImage(product.image)) + '">' +
+    '<img src="' + escapeHTML(safeProductImage(product.image)) + '" alt="Thumbnail 1">' +
     '</div>' +
-    '<div class="product-thumbnail" data-src="' + product.thumbnail2 + '">' +
-    '<img src="' + product.thumbnail2 + '" alt="Thumbnail 2">' +
+    '<div class="product-thumbnail" data-src="' + escapeHTML(safeProductImage(product.thumbnail2)) + '">' +
+    '<img src="' + escapeHTML(safeProductImage(product.thumbnail2)) + '" alt="Thumbnail 2">' +
     '</div>' +
-    '<div class="product-thumbnail" data-src="' + product.thumbnail3 + '">' +
-    '<img src="' + product.thumbnail3 + '" alt="Thumbnail 3">' +
+    '<div class="product-thumbnail" data-src="' + escapeHTML(safeProductImage(product.thumbnail3)) + '">' +
+    '<img src="' + escapeHTML(safeProductImage(product.thumbnail3)) + '" alt="Thumbnail 3">' +
     '</div>' +
-    '<div class="product-thumbnail" data-src="' + product.thumbnail4 + '">' +
-    '<img src="' + product.thumbnail4 + '" alt="Thumbnail 4">' +
+    '<div class="product-thumbnail" data-src="' + escapeHTML(safeProductImage(product.thumbnail4)) + '">' +
+    '<img src="' + escapeHTML(safeProductImage(product.thumbnail4)) + '" alt="Thumbnail 4">' +
     '</div>' +
     '</div>' +
     '</div>';
@@ -79,8 +92,8 @@ function renderProductDetails() {
   var inWish = typeof isInWishlist === 'function' && isInWishlist(product.id);
   var infoHtml =
     '<div class="product-info">' +
-    '<span class="product-info-category">' + product.category + '</span>' +
-    '<h1 class="product-info-name">' + product.name + '</h1>' +
+    '<span class="product-info-category">' + escapeHTML(product.category) + '</span>' +
+    '<h1 class="product-info-name">' + escapeHTML(product.name) + '</h1>' +
     '<div class="product-info-rating">' +
     '<div class="product-info-stars">' + generateStars(product.rating, 20) + '</div>' +
     '<span class="product-info-review-text">' + product.rating.toFixed(1) + ' · <a href="#reviews">' + product.reviews + ' reviews</a></span>' +
@@ -92,9 +105,9 @@ function renderProductDetails() {
     '</div>' +
     '<div class="product-info-stock">' +
     '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0018 0z"/></svg>' +
-    '<span>' + product.stock + '</span>' +
+    '<span>' + escapeHTML(product.stock) + '</span>' +
     '</div>' +
-    '<p class="product-info-description">' + product.description + ' Experience premium quality and exceptional craftsmanship designed to elevate your everyday lifestyle. This product comes with a manufacturer warranty and our satisfaction guarantee.</p>' +
+    '<p class="product-info-description">' + escapeHTML(product.description) + ' Experience premium quality and exceptional craftsmanship designed to elevate your everyday lifestyle. This product comes with a manufacturer warranty and our satisfaction guarantee.</p>' +
     '<div class="product-quantity">' +
     '<label for="quantity-input">Quantity:</label>' +
     '<div class="quantity-selector">' +
@@ -111,14 +124,19 @@ function renderProductDetails() {
     '</button>' +
     '</div>' +
     '<div class="product-meta">' +
-    '<div class="product-meta-item"><span class="product-meta-label">Brand</span><span class="product-meta-value">' + product.brand + '</span></div>' +
-    '<div class="product-meta-item"><span class="product-meta-label">Category</span><span class="product-meta-value">' + product.category + '</span></div>' +
-    '<div class="product-meta-item"><span class="product-meta-label">SKU</span><span class="product-meta-value">' + product.sku + '</span></div>' +
+    '<div class="product-meta-item"><span class="product-meta-label">Brand</span><span class="product-meta-value">' + escapeHTML(product.brand) + '</span></div>' +
+    '<div class="product-meta-item"><span class="product-meta-label">Category</span><span class="product-meta-value">' + escapeHTML(product.category) + '</span></div>' +
+    '<div class="product-meta-item"><span class="product-meta-label">SKU</span><span class="product-meta-value">' + escapeHTML(product.sku) + '</span></div>' +
     '<div class="product-meta-item"><span class="product-meta-label">Shipping</span><span class="product-meta-value">Free Shipping</span></div>' +
     '</div>' +
     '</div>';
 
   container.innerHTML = galleryHtml + infoHtml;
+  container.querySelectorAll('img').forEach(function (image) {
+    image.addEventListener('error', function () {
+      image.src = 'images/products/fallback-home.svg';
+    }, { once: true });
+  });
 
   /* Store current product globally */
   window.currentProduct = product;
@@ -146,7 +164,7 @@ function fillProductTabs(product) {
   var specTable = document.querySelector('#tab-specs .specs-table');
   if (specTable) {
     var specs = product.specifications || {};
-    specTable.innerHTML = Object.keys(specs).map(function(key){ return '<tr><th>' + key + '</th><td>' + specs[key] + '</td></tr>'; }).join('');
+    specTable.innerHTML = Object.keys(specs).map(function(key){ return '<tr><th>' + escapeHTML(key) + '</th><td>' + escapeHTML(specs[key]) + '</td></tr>'; }).join('');
   }
   var shippingPane = document.querySelector('#tab-shipping p');
   var returnPane = document.querySelector('#tab-returns p');
@@ -305,14 +323,14 @@ function renderReviews() {
       day: 'numeric'
     });
     return '<div class="review-card">' +
-      '<div class="review-avatar">' + initials + '</div>' +
+      '<div class="review-avatar">' + escapeHTML(initials) + '</div>' +
       '<div class="review-content">' +
       '<div class="review-header">' +
-      '<span class="review-name">' + review.name + '</span>' +
+      '<span class="review-name">' + escapeHTML(review.name) + '</span>' +
       '<span class="review-date">' + formattedDate + '</span>' +
       '</div>' +
       '<div class="review-rating">' + generateStars(review.rating, 16) + '</div>' +
-      '<p class="review-text">' + review.text + '</p>' +
+      '<p class="review-text">' + escapeHTML(review.text) + '</p>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -405,14 +423,14 @@ function initAddReviewForm() {
       });
 
       var newReview = '<div class="review-card">' +
-        '<div class="review-avatar">' + initials + '</div>' +
+        '<div class="review-avatar">' + escapeHTML(initials) + '</div>' +
         '<div class="review-content">' +
         '<div class="review-header">' +
-        '<span class="review-name">' + nameInput.value.trim() + '</span>' +
+        '<span class="review-name">' + escapeHTML(nameInput.value.trim()) + '</span>' +
         '<span class="review-date">' + now + '</span>' +
         '</div>' +
         '<div class="review-rating">' + generateStars(selectedRating, 16) + '</div>' +
-        '<p class="review-text">' + commentInput.value.trim() + '</p>' +
+        '<p class="review-text">' + escapeHTML(commentInput.value.trim()) + '</p>' +
         '</div>' +
         '</div>';
 
