@@ -22,15 +22,11 @@ import {
 const app = express();
 app.set('trust proxy', 1);
 
-if (typeof JWT_SECRET !== 'string' || JWT_SECRET.length < 32) {
-    throw new Error('JWT_SECRET of at least 32 characters is required.');
-}
-
 // Validation schemas
 const registerSchema = z.object({
     name: z.string().trim().min(2).max(100),
     email: z.string().trim().email().max(255),
-    password: z.string().min(8).max(128)
+    password: z.string().max(128)
 });
 
 const loginSchema = z.object({
@@ -319,7 +315,15 @@ app.get('/api/health', async (req, res) => {
 app.post('/api/auth/register', authLimiter, validate(registerSchema), asyncRoute(async (req, res) => {
     const name = req.body.name;
     const email = req.body.email.toLowerCase();
-    const passwordHash = await bcrypt.hash(req.body.password, 12);
+    const password = req.body.password;
+
+    if (password.length < 12) {
+        return res.status(400).json({
+            error: 'Password must be at least 12 characters long.'
+        });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
 
     try {
         const result = await db.query(

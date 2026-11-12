@@ -129,8 +129,8 @@
         return;
       }
 
-      if (password.length < 8) {
-        showMessage(form, 'Password must be at least 8 characters.', false);
+      if (password.length < 12) {
+        showMessage(form, 'Password must be at least 12 characters long.', false);
         return;
       }
 
