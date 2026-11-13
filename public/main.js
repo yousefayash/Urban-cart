@@ -6,6 +6,22 @@
 /* ===== CART FUNCTIONS ===== */
 const CART_KEY = 'urbancart_cart';
 
+function escapeHTML(value) {
+  return String(value == null ? '' : value).replace(/[&<>\"']/g, function (char) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[char];
+  });
+}
+
+function safeImageURL(value) {
+  var raw = String(value || '');
+  try {
+    var url = new URL(raw, window.location.origin);
+    if (url.protocol !== 'https:' && url.origin !== window.location.origin) return '';
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    return url.href;
+  } catch (_) { return ''; }
+}
+
 function getCart() {
   try {
     var data = localStorage.getItem(CART_KEY);
@@ -79,7 +95,7 @@ function showToast(message, type) {
   toast.className = 'toast toast-' + type;
   toast.innerHTML =
     '<div class="toast-icon">' + (icons[type] || icons.info) + '</div>' +
-    '<div class="toast-message">' + message + '</div>' +
+    '<div class="toast-message">' + escapeHTML(message) + '</div>' +
     '<button class="toast-close" aria-label="Close">' +
     '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
     '</button>';
@@ -137,18 +153,18 @@ function generateProductCard(product) {
   var badgeClass = product.badge === 'New' ? 'new' : '';
   return '<article class="product-card" data-product-id="' + product.id + '">' +
     '<div class="product-card-image">' +
-    '<span class="product-card-badge ' + badgeClass + '">' + product.badge + '</span>' +
+    '<span class="product-card-badge ' + badgeClass + '">' + escapeHTML(product.badge || '') + '</span>' +
     '<button class="product-card-wishlist ' + (inWish ? 'active' : '') + '" data-product-id="' + product.id + '" aria-label="Add to wishlist">' +
     '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>' +
     '</button>' +
     '<a href="product-details.html?id=' + product.id + '">' +
-    '<img src="' + product.image + '" alt="' + product.name + '" loading="lazy" onerror="this.onerror=null;this.src=\'' + (typeof getProductFallback === 'function' ? getProductFallback(product) : '') + '\'">' +
+    '<img src="' + escapeHTML(safeImageURL(product.image)) + '" alt="' + escapeHTML(product.name) + '" loading="lazy">' +
     '</a>' +
     '</div>' +
     '<div class="product-card-body">' +
-    '<span class="product-card-category">' + product.category + '</span>' +
-    '<h3 class="product-card-name"><a href="product-details.html?id=' + product.id + '">' + product.name + '</a></h3>' +
-    '<p class="product-card-desc">' + product.description + '</p>' +
+    '<span class="product-card-category">' + escapeHTML(product.category) + '</span>' +
+    '<h3 class="product-card-name"><a href="product-details.html?id=' + product.id + '">' + escapeHTML(product.name) + '</a></h3>' +
+    '<p class="product-card-desc">' + escapeHTML(product.description) + '</p>' +
     '<div class="product-card-rating">' +
     '<div class="product-card-stars">' + generateStars(product.rating, 16) + '</div>' +
     '<span class="product-card-review-count">(' + product.reviews + ')</span>' +
@@ -193,11 +209,11 @@ function renderCategories() {
   if (!container) return;
   container.innerHTML = CATEGORIES.map(function (cat) {
     var count = PRODUCTS.filter(function (p) { return p.category === cat.name; }).length;
-    return '<a href="shop.html?category=' + encodeURIComponent(cat.name) + '" class="category-card" data-category="' + cat.name + '">' +
-      '<img src="' + cat.image + '" alt="' + cat.name + '" loading="lazy">' +
+    return '<a href="shop.html?category=' + encodeURIComponent(cat.name) + '" class="category-card" data-category="' + escapeHTML(cat.name) + '">' +
+      '<img src="' + escapeHTML(safeImageURL(cat.image)) + '" alt="' + escapeHTML(cat.name) + '" loading="lazy">' +
       '<div class="category-card-overlay">' +
-      '<h3 class="category-card-name">' + cat.name + '</h3>' +
-      '<p class="category-card-desc">' + cat.description + ' · ' + count + ' products</p>' +
+      '<h3 class="category-card-name">' + escapeHTML(cat.name) + '</h3>' +
+      '<p class="category-card-desc">' + escapeHTML(cat.description) + ' · ' + count + ' products</p>' +
       '</div>' +
       '<div class="category-card-arrow">' +
       '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>' +

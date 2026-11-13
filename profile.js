@@ -1,18 +1,48 @@
-document.addEventListener('DOMContentLoaded', function() {
-    var key = 'urbancart_profile';
-    var p = JSON.parse(localStorage.getItem(key) || 'null');
+/* URBAN CART - PROFILE MODULE (API-BOUND) */
+document.addEventListener('DOMContentLoaded', async function() {
+    var token = localStorage.getItem('urbancart_token');
+    var profileKey = 'urbancart_profile';
+
+    if (!token) {
+        location.href = 'signin.html?redirect=profile.html';
+        return;
+    }
+
+    var user = null;
+    try {
+        var response = await fetch('/api/auth/me', {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        });
+        var data = await response.json().catch(function() { return {}; });
+        if (!response.ok || !data.user) {
+            localStorage.removeItem('urbancart_token');
+            localStorage.removeItem('urbancart_user');
+            localStorage.removeItem('urbancart_account_session');
+            location.href = 'signin.html?redirect=profile.html';
+            return;
+        }
+        user = data.user;
+    } catch (err) {
+        localStorage.removeItem('urbancart_token');
+        localStorage.removeItem('urbancart_user');
+        localStorage.removeItem('urbancart_account_session');
+        location.href = 'signin.html?redirect=profile.html';
+        return;
+    }
+
     var nameSide = document.getElementById('profile-name-side');
     var avatar = document.getElementById('profile-avatar');
-    if (p) {
-        Object.keys(p).forEach(k => {
-            var el = document.getElementById('profile-' + k);
-            if (el) el.value = p[k] || ''
-        });
-        var name = p.name || 'Urban Customer';
-        if (nameSide) nameSide.textContent = name;
-        if (avatar) avatar.textContent = name.trim().charAt(0).toUpperCase();
-    }
-    document.getElementById('profile-form').addEventListener('submit', function(e) {
+    if (nameSide) nameSide.textContent = user.name || 'Urban Customer';
+    if (avatar) avatar.textContent = (user.name || 'U').trim().charAt(0).toUpperCase();
+
+    var form = document.getElementById('profile-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
         var data = {
             name: document.getElementById('profile-name').value,
@@ -21,10 +51,22 @@ document.addEventListener('DOMContentLoaded', function() {
             city: document.getElementById('profile-city').value,
             address: document.getElementById('profile-address').value
         };
-        localStorage.setItem(key, JSON.stringify(data));
-        if (nameSide) nameSide.textContent = data.name;
-        if (avatar) avatar.textContent = data.name.trim().charAt(0).toUpperCase();
+        localStorage.setItem(profileKey, JSON.stringify(data));
         localStorage.setItem('urbancart_account_session', 'active');
-        document.getElementById('profile-message').textContent = 'Profile saved successfully.'
-    })
+        var msg = document.getElementById('profile-message');
+        if (msg) msg.textContent = 'Profile saved successfully.';
+
+        try {
+            await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(data)
+            });
+        } catch (err) {
+            // Non-critical: local storage still holds the data
+        }
+    });
 });

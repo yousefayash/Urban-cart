@@ -1,5 +1,4 @@
 
-import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -9,6 +8,7 @@ import jwt from 'jsonwebtoken';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
 
+import { JWT_SECRET } from './env.js';
 import {
     db,
     initDb,
@@ -22,22 +22,11 @@ import {
 const app = express();
 app.set('trust proxy', 1);
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (process.env.NODE_ENV === 'production' && (!JWT_SECRET || JWT_SECRET.length < 32)) {
-    throw new Error('A JWT_SECRET of at least 32 characters is required in production.');
-}
-
-if (!JWT_SECRET) {
-    console.warn('Using a development-only JWT secret. Set JWT_SECRET before deployment.');
-}
-
-const tokenSecret = JWT_SECRET || 'local-development-secret-change-this';
 // Validation schemas
 const registerSchema = z.object({
     name: z.string().trim().min(2).max(100),
     email: z.string().trim().email().max(255),
-    password: z.string().min(8).max(128)
+    password: z.string().max(128)
 });
 
 const loginSchema = z.object({
@@ -91,7 +80,7 @@ function getId(value) {
 function sign(user) {
     return jwt.sign(
         { sub: user.id, role: user.role },
-        tokenSecret,
+        JWT_SECRET,
         { expiresIn: '7d' }
     );
 }
@@ -105,7 +94,7 @@ function auth(req, res, next) {
     }
 
     try {
-        req.auth = jwt.verify(token, tokenSecret);
+        req.auth = jwt.verify(token, JWT_SECRET);
         next();
     } catch {
         return res.status(401).json({ error: 'Invalid or expired token' });
@@ -120,32 +109,106 @@ function admin(req, res, next) {
     next();
 }
 
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+const configuredOrigins = (process.env.FRONTEND_ORIGIN || '')
     .split(',')
-    .map(origin => origin.trim())
-    .filter(Boolean);
-
-app.use(helmet());
-
-app.use(cors({
-    origin(origin, callback) {
-        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-            return callback(null, true);
+    .map(value => value.trim())
+    .filter(Boolean)
+    .map(value => {
+        let parsed;
+        try { parsed = new URL(value); }
+        catch { throw new Error('FRONTEND_ORIGIN contains an invalid URL.'); }
+        if (parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+            throw new Error('FRONTEND_ORIGIN entries must be origins only, without paths or credentials.');
         }
+        if (process.env.NODE_ENV === 'production' && parsed.protocol !== 'https:') {
+            throw new Error('FRONTEND_ORIGIN must use HTTPS in production.');
+        }
+        if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+            throw new Error('FRONTEND_ORIGIN must use HTTPS except for localhost development.');
+        }
+        return parsed.origin;
+    });
 
-        return callback(new Error('Origin not allowed by CORS'));
+const allowedOrigins = new Set(configuredOrigins);
+if (process.env.VERCEL_URL) {
+    allowedOrigins.add(`https://${process.env.VERCEL_URL}`);
+}
+if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.add('http://localhost:5173');
+    allowedOrigins.add('http://127.0.0.1:5173');
+}
+
+
+app.use(helmet({
+    contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            imgSrc: ["'self'", "data:", "https://images.pexels.com", "https://images.unsplash.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            upgradeInsecureRequests: [],
+            connectSrc: ["'self'"],
+            frameSrc: ["'none'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"]
+        }
     },
-    credentials: true
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    },
+    noSniff: true,
+    frameguard: { action: 'deny' },
+    hidePoweredBy: true,
+    crossOriginResourcePolicy: { policy: 'same-origin' }
 }));
+
+app.use((req, res, next) => {
+    const requestOrigin = req.get('Origin');
+    const forwardedHost = req.get('x-forwarded-host') || req.get('host');
+    const forwardedProto = req.get('x-forwarded-proto') || req.protocol;
+    const isSameOrigin = Boolean(
+        requestOrigin && forwardedHost && requestOrigin === `${forwardedProto}://${forwardedHost}`
+    );
+
+    cors({
+        origin(origin, callback) {
+            // No Origin means a non-browser client; same-origin and explicitly
+            // configured HTTPS frontends are the only browser origins allowed.
+            if (!origin) return callback(null, false);
+            return callback(null, isSameOrigin || allowedOrigins.has(origin));
+        },
+        // The API authenticates with Bearer tokens, not cross-site cookies.
+        credentials: false,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        maxAge: 600
+    })(req, res, next);
+});
 
 app.use(express.json({ limit: '100kb' }));
 
-app.use(rateLimit({
+const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 300,
     standardHeaders: true,
-    legacyHeaders: false
-}));
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please try again later.' }
+});
+app.use(globalLimiter);
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many authentication attempts. Please try again later.' }
+});
 
 // Initialize Neon once, then wait for it before handling API requests.
 // Initialize Neon and create the initial admin account.
@@ -249,10 +312,18 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Authentication
-app.post('/api/auth/register', validate(registerSchema), asyncRoute(async (req, res) => {
+app.post('/api/auth/register', authLimiter, validate(registerSchema), asyncRoute(async (req, res) => {
     const name = req.body.name;
     const email = req.body.email.toLowerCase();
-    const passwordHash = await bcrypt.hash(req.body.password, 12);
+    const password = req.body.password;
+
+    if (password.length < 12) {
+        return res.status(400).json({
+            error: 'Password must be at least 12 characters long.'
+        });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
 
     try {
         const result = await db.query(
@@ -276,7 +347,7 @@ app.post('/api/auth/register', validate(registerSchema), asyncRoute(async (req, 
     }
 }));
 
-app.post('/api/auth/login', validate(loginSchema), asyncRoute(async (req, res) => {
+app.post('/api/auth/login', authLimiter, validate(loginSchema), asyncRoute(async (req, res) => {
     const email = req.body.email.toLowerCase();
 
     const result = await db.query(
@@ -290,11 +361,23 @@ app.post('/api/auth/login', validate(loginSchema), asyncRoute(async (req, res) =
         return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // Record successful customer sign-ins only. Never store submitted passwords.
+    if (user.role === 'customer') {
+        await db.query(
+            'INSERT INTO login_events (user_id) VALUES ($1)',
+            [user.id]
+        );
+    }
+
     res.json({
         user: publicUser(user),
         token: sign(user)
     });
 }));
+
+// Password reset is not available. An email delivery provider must be
+// configured before enabling these routes. The frontend currently shows
+// a "contact support" message instead of attempting reset flows.
 
 app.get('/api/auth/me', auth, asyncRoute(async (req, res) => {
     const result = await db.query(
@@ -304,6 +387,28 @@ app.get('/api/auth/me', auth, asyncRoute(async (req, res) => {
 
     if (!result.rows[0]) {
         return res.status(401).json({ error: 'User no longer exists' });
+    }
+
+    res.json({ user: publicUser(result.rows[0]) });
+}));
+
+// Profile update (self-service; customers can only update their own profile)
+app.put('/api/profile', auth, validate(z.object({
+    name: z.string().trim().min(2).max(100),
+    phone: z.string().trim().max(20).optional().default(''),
+    city: z.string().trim().max(100).optional().default(''),
+    address: z.string().trim().max(500).optional().default('')
+})), asyncRoute(async (req, res) => {
+    const result = await db.query(
+        `UPDATE users
+         SET name = $1
+         WHERE id = $2
+         RETURNING *`,
+        [req.body.name, req.auth.sub]
+    );
+
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'User not found' });
     }
 
     res.json({ user: publicUser(result.rows[0]) });
@@ -721,7 +826,7 @@ app.get('/api/orders/:id', auth, asyncRoute(async (req, res) => {
 // Admin
 app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
     const [users, products, orders, revenue] = await Promise.all([
-        db.query('SELECT COUNT(*)::int AS count FROM users'),
+        db.query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'customer'"),
         db.query('SELECT COUNT(*)::int AS count FROM products'),
         db.query('SELECT COUNT(*)::int AS count FROM orders'),
         db.query(
@@ -729,8 +834,36 @@ app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
              FROM orders WHERE payment_status = 'paid'`
         )
     ]);
-    
-    app.get('/api/admin/orders', auth, admin, asyncRoute(async (req, res) => {
+
+    res.json({
+        users: users.rows[0].count,
+        products: products.rows[0].count,
+        orders: orders.rows[0].count,
+        revenue: Number(revenue.rows[0].total)
+    });
+}));
+
+app.get('/api/admin/customers', auth, admin, asyncRoute(async (req, res) => {
+    const result = await db.query(
+        `SELECT
+            u.id,
+            u.name,
+            u.email,
+            u.created_at,
+            MAX(le.logged_in_at) AS last_login_at,
+            COUNT(le.id)::int AS successful_logins
+         FROM users u
+         LEFT JOIN login_events le ON le.user_id = u.id
+         WHERE u.role = 'customer'
+         GROUP BY u.id, u.name, u.email, u.created_at
+         ORDER BY MAX(le.logged_in_at) DESC NULLS LAST, u.created_at DESC
+         LIMIT 500`
+    );
+
+    res.json({ customers: result.rows });
+}));
+
+app.get('/api/admin/orders', auth, admin, asyncRoute(async (req, res) => {
     const result = await db.query(
         `SELECT *
          FROM orders
@@ -743,14 +876,6 @@ app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
     );
 
     res.json({ orders });
-}));
-
-    res.json({
-        users: users.rows[0].count,
-        products: products.rows[0].count,
-        orders: orders.rows[0].count,
-        revenue: Number(revenue.rows[0].total)
-    });
 }));
 
 app.post('/api/admin/products', auth, admin, validate(productSchema), asyncRoute(async (req, res) => {
@@ -777,6 +902,76 @@ app.post('/api/admin/products', auth, admin, validate(productSchema), asyncRoute
     );
 
     res.status(201).json(productView(result.rows[0]));
+}));
+
+app.get('/api/admin/products', auth, admin, asyncRoute(async (req, res) => {
+    const result = await db.query(
+        'SELECT * FROM products ORDER BY created_at DESC LIMIT 200'
+    );
+
+    res.json(result.rows.map(productView));
+}));
+
+app.put('/api/admin/products/:id', auth, admin, validate(productSchema), asyncRoute(async (req, res) => {
+    const productId = getId(req.params.id);
+
+    if (!productId) {
+        return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    const product = req.body;
+
+    const result = await db.query(
+        `UPDATE products
+         SET name = $1,
+             description = $2,
+             category = $3,
+             price = $4,
+             old_price = $5,
+             image = $6,
+             brand = $7,
+             sku = $8,
+             stock = $9
+         WHERE id = $10
+         RETURNING *`,
+        [
+            product.name,
+            product.description,
+            product.category,
+            product.price,
+            product.oldPrice ?? null,
+            product.image ?? null,
+            product.brand,
+            product.sku ?? null,
+            product.stock,
+            productId
+        ]
+    );
+
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.json(productView(result.rows[0]));
+}));
+
+app.delete('/api/admin/products/:id', auth, admin, asyncRoute(async (req, res) => {
+    const productId = getId(req.params.id);
+
+    if (!productId) {
+        return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    const result = await db.query(
+        'DELETE FROM products WHERE id = $1 RETURNING id',
+        [productId]
+    );
+
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.status(204).end();
 }));
 
 app.patch('/api/admin/orders/:id', auth, admin, validate(z.object({

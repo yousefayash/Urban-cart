@@ -9,6 +9,13 @@ const page = (name) => resolve(__dirname, name)
 export default defineConfig({
   root: '.',
   base: './',
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000'
+      }
+    }
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

@@ -17,9 +17,14 @@
         return '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r))
     }
 
+    function safeShopImage(value) {
+        try { var u = new URL(String(value || ''), location.origin); return (u.protocol === 'https:' || (u.protocol === 'http:' && u.origin === location.origin)) ? u.href : ''; }
+        catch (_) { return ''; }
+    }
+
     function card(p) {
         var wished = typeof isInWishlist === 'function' && isInWishlist(p.id);
-        return '<article class="ec-card"><div class="ec-card-img"><span class="ec-badge">' + esc(p.badge || 'Featured') + '</span><button class="ec-heart ' + (wished ? 'active' : '') + '" data-wish="' + p.id + '">' + (wished ? '♥' : '♡') + '</button><a href="product-details.html?id=' + p.id + '"><img src="' + esc(p.image) + '" alt="' + esc(p.name) + '" loading="lazy"></a></div><div class="ec-card-body"><span class="ec-cat">' + esc(p.category) + '</span><h3 class="ec-name"><a href="product-details.html?id=' + p.id + '">' + esc(p.name) + '</a></h3><div class="ec-rating">' + stars(p.rating) + ' <span class="muted">(' + p.reviews + ')</span></div><div class="ec-price"><strong>EGB ' + p.price.toFixed(2) + '</strong><span class="ec-old">EGB ' + p.oldPrice.toFixed(2) + '</span></div><div class="ec-actions"><button class="btn btn-primary" data-cart="' + p.id + '">Add to Cart</button><a class="btn btn-secondary" href="product-details.html?id=' + p.id + '">View</a></div></div></article>'
+        return '<article class="ec-card"><div class="ec-card-img"><span class="ec-badge">' + esc(p.badge || 'Featured') + '</span><button class="ec-heart ' + (wished ? 'active' : '') + '" data-wish="' + p.id + '">' + (wished ? '♥' : '♡') + '</button><a href="product-details.html?id=' + p.id + '"><img src="' + esc(safeShopImage(p.image)) + '" alt="' + esc(p.name) + '" loading="lazy"></a></div><div class="ec-card-body"><span class="ec-cat">' + esc(p.category) + '</span><h3 class="ec-name"><a href="product-details.html?id=' + p.id + '">' + esc(p.name) + '</a></h3><div class="ec-rating">' + stars(p.rating) + ' <span class="muted">(' + p.reviews + ')</span></div><div class="ec-price"><strong>EGB ' + p.price.toFixed(2) + '</strong><span class="ec-old">EGB ' + p.oldPrice.toFixed(2) + '</span></div><div class="ec-actions"><button class="btn btn-primary" data-cart="' + p.id + '">Add to Cart</button><a class="btn btn-secondary" href="product-details.html?id=' + p.id + '">View</a></div></div></article>'
     }
 
     function filter() {

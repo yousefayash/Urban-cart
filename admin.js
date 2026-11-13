@@ -1,138 +1,338 @@
 (function () {
   'use strict';
 
-  var ADMIN_EMAIL = 'admin@example.com';
-  var ADMIN_PASSWORD = 'admin123456';
-  var SESSION_KEY = 'urbancart_admin_session';
-  var ORDERS_KEY = 'urbancart_orders';
+  var TOKEN_KEY = 'urbancart_token';
+  var orders = [];
+  var products = Array.isArray(window.PRODUCTS) ? window.PRODUCTS : [];
 
-  function readOrders() {
-    try { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); } catch (error) { return []; }
-  }
+  function api(url, options) {
+    options = options || {};
+    options.headers = Object.assign({
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || '')
+    }, options.headers || {});
 
-  function readProducts() {
-    return Array.isArray(window.PRODUCTS) ? window.PRODUCTS : [];
-  }
-
-  function escapeHtml(value) {
-    return String(value == null ? '' : value).replace(/[&<>'"]/g, function (char) {
-      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char];
+    return fetch('/api' + url, options).then(function (response) {
+      return response.json().catch(function () {
+        return {};
+      }).then(function (data) {
+        if (!response.ok) throw new Error(data.error || 'Request failed');
+        return data;
+      });
     });
   }
 
-  function formatMoney(value) {
+  function money(value) {
     return 'EGB ' + Number(value || 0).toFixed(2);
   }
 
-  function getCustomers(orders) {
-    var seen = {};
-    orders.forEach(function (order) {
-      var customer = order.customer || {};
-      var email = String(customer.email || 'guest@example.com').toLowerCase();
-      if (!seen[email]) seen[email] = { name: customer.name || 'Guest customer', email: customer.email || 'Guest checkout', city: customer.city || '—', orders: 0, total: 0 };
-      seen[email].orders += 1;
-      seen[email].total += Number(order.total || 0);
+  function escape(value) {
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+      }[char];
     });
-    return Object.keys(seen).map(function (key) { return seen[key]; }).sort(function (a, b) { return b.total - a.total; });
   }
 
-  function renderStats(orders, products, customers) {
-    var revenue = orders.reduce(function (sum, order) { return sum + Number(order.total || 0); }, 0);
-    document.getElementById('stat-revenue').textContent = formatMoney(revenue);
-    document.getElementById('stat-orders').textContent = orders.length;
-    document.getElementById('stat-products').textContent = products.length;
-    document.getElementById('stat-customers').textContent = customers.length;
-    document.getElementById('orders-count').textContent = orders.length + (orders.length === 1 ? ' order' : ' orders');
-    document.getElementById('products-count').textContent = products.length + (products.length === 1 ? ' product' : ' products');
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('urbancart_user');
+    localStorage.removeItem('urbancart_admin_session');
+    localStorage.removeItem('urbancart_account_session');
+    window.location.href = 'signin.html';
   }
 
-  function renderOrders(orders) {
-    var table = document.getElementById('orders-table');
-    var empty = document.getElementById('orders-empty');
-    empty.hidden = orders.length > 0;
-    table.innerHTML = orders.slice(0, 20).map(function (order) {
-      var customer = order.customer || {};
-      var status = String(order.status || 'Processing').toLowerCase();
-      var options = ['Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
-      return '<tr><td><strong class="order-id">' + escapeHtml(order.id) + '</strong><span class="cell-muted">' + (order.items || []).length + ' item(s)</span></td>' +
-        '<td><strong>' + escapeHtml(customer.name || 'Guest customer') + '</strong><span class="cell-muted">' + escapeHtml(customer.email || '—') + '</span></td>' +
-        '<td class="cell-muted">' + escapeHtml(order.date || '—') + '</td><td><strong>' + formatMoney(order.total) + '</strong></td>' +
-        '<td><select class="status-select status-' + status.replace(/\s+/g, '-') + '" data-order-id="' + escapeHtml(order.id) + '">' + options.map(function (option) { return '<option ' + (option.toLowerCase() === status ? 'selected' : '') + '>' + option + '</option>'; }).join('') + '</select></td>' +
-        '<td><button class="order-view" data-order-id="' + escapeHtml(order.id) + '" type="button" aria-label="View order details">View</button></td></tr>';
-    }).join('');
-  }
-
-  function renderProducts(products, query) {
-    var q = String(query || '').toLowerCase();
-    var filtered = products.filter(function (product) { return !q || [product.name, product.category, product.brand, product.sku].join(' ').toLowerCase().indexOf(q) !== -1; });
-    document.getElementById('products-table').innerHTML = filtered.map(function (product) {
-      var stock = product.stock === 'In Stock' ? 25 : (Number(product.stock) || 0);
-      return '<tr><td><div class="product-cell"><img src="' + escapeHtml(product.image) + '" alt=""><strong>' + escapeHtml(product.name) + '</strong></div></td><td class="cell-muted">' + escapeHtml(product.category) + '</td><td class="cell-muted">' + escapeHtml(product.sku || '—') + '</td><td><strong>' + formatMoney(product.price) + '</strong></td><td><span class="stock-pill ' + (stock > 0 ? 'in-stock' : 'out-stock') + '">' + (stock > 0 ? stock + ' in stock' : 'Out of stock') + '</span></td></tr>';
-    }).join('') || '<tr><td colspan="5" class="table-empty">No products match your search.</td></tr>';
-  }
-
-  function renderCustomers(customers) {
-    var list = document.getElementById('customers-list');
-    document.getElementById('customers-empty').hidden = customers.length > 0;
-    list.innerHTML = customers.slice(0, 8).map(function (customer) {
-      var initials = String(customer.name).split(' ').map(function (part) { return part[0]; }).join('').slice(0, 2).toUpperCase();
-      return '<div class="customer-row"><span class="customer-avatar">' + escapeHtml(initials) + '</span><div class="customer-info"><strong>' + escapeHtml(customer.name) + '</strong><span>' + escapeHtml(customer.email) + ' · ' + escapeHtml(customer.city) + '</span></div><div class="customer-spend"><strong>' + formatMoney(customer.total) + '</strong><span>' + customer.orders + (customer.orders === 1 ? ' order' : ' orders') + '</span></div></div>';
-    }).join('');
-  }
-
-  function refresh() {
-    var orders = readOrders();
-    var products = readProducts();
-    var customers = getCustomers(orders);
-    renderStats(orders, products, customers);
-    renderOrders(orders);
-    renderProducts(products, document.getElementById('product-search').value);
-    renderCustomers(customers);
-  }
-
-  function openDashboard() {
+  function showDashboard() {
     document.getElementById('admin-login-view').hidden = true;
     document.getElementById('admin-dashboard-view').hidden = false;
-    document.getElementById('dashboard-date').textContent = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
-    refresh();
+
+    document.getElementById('dashboard-date').textContent =
+      new Intl.DateTimeFormat('en', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }).format(new Date());
   }
 
-  function showLogin() {
-    document.getElementById('admin-login-view').hidden = false;
-    document.getElementById('admin-dashboard-view').hidden = true;
+  function renderStats(stats) {
+    document.getElementById('stat-revenue').textContent = money(stats.revenue);
+    document.getElementById('stat-orders').textContent = stats.orders;
+    document.getElementById('stat-products').textContent = stats.products;
+    document.getElementById('stat-customers').textContent = stats.users;
+
+    document.getElementById('orders-count').textContent =
+      orders.length + (orders.length === 1 ? ' order' : ' orders');
+
+    document.getElementById('products-count').textContent =
+      products.length + (products.length === 1 ? ' product' : ' products');
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  function renderOrders() {
+    var table = document.getElementById('orders-table');
+    var empty = document.getElementById('orders-empty');
+
+    empty.hidden = orders.length > 0;
+
+    var statuses = [
+      'pending',
+      'processing',
+      'shipped',
+      'delivered',
+      'cancelled'
+    ];
+
+    table.innerHTML = orders.map(function (order) {
+      var customer = order.customer || {};
+      var status = String(order.status || 'pending').toLowerCase();
+
+      return '<tr>' +
+        '<td><strong class="order-id">' + escape(order.id) + '</strong></td>' +
+        '<td><strong>' + escape(customer.name || 'Customer') +
+        '</strong><span class="cell-muted">' +
+        escape(customer.email || '—') + '</span></td>' +
+        '<td class="cell-muted">' + escape(order.date || order.created_at || '—') + '</td>' +
+        '<td><strong>' + money(order.total) + '</strong></td>' +
+        '<td><select class="status-select" data-order-id="' + escape(order.id) + '">' +
+        statuses.map(function (item) {
+          return '<option value="' + item + '" ' +
+            (item === status ? 'selected' : '') + '>' +
+            item.charAt(0).toUpperCase() + item.slice(1) +
+            '</option>';
+        }).join('') +
+        '</select></td>' +
+        '<td><button class="order-view" data-order-id="' +
+        escape(order.id) + '" type="button">View</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function renderProducts(query) {
+    var q = String(query || '').toLowerCase();
+
+    var filtered = products.filter(function (product) {
+      return !q || [
+        product.name,
+        product.category,
+        product.brand,
+        product.sku
+      ].join(' ').toLowerCase().includes(q);
+    });
+
+    document.getElementById('products-table').innerHTML =
+      filtered.map(function (product) {
+        var stock = Number(product.stock) || 0;
+
+        return '<tr>' +
+          '<td><div class="product-cell"><img src="' +
+          escape(product.image) + '" alt=""><strong>' +
+          escape(product.name) + '</strong></div></td>' +
+          '<td>' + escape(product.category) + '</td>' +
+          '<td>' + escape(product.sku || '—') + '</td>' +
+          '<td><strong>' + money(product.price) + '</strong></td>' +
+          '<td><span class="stock-pill ' +
+          (stock > 0 ? 'in-stock' : 'out-stock') + '">' +
+          (stock > 0 ? stock + ' in stock' : 'Out of stock') +
+          '</span></td></tr>';
+      }).join('') ||
+      '<tr><td colspan="5" class="table-empty">No products match your search.</td></tr>';
+  }
+
+  function renderCustomers() {
+    var customers = {};
+
+    orders.forEach(function (order) {
+      var customer = order.customer || {};
+      var email = customer.email || 'unknown';
+
+      if (!customers[email]) {
+        customers[email] = {
+          name: customer.name || 'Customer',
+          email: email,
+          total: 0,
+          count: 0
+        };
+      }
+
+      customers[email].total += Number(order.total || 0);
+      customers[email].count++;
+    });
+
+    var list = Object.keys(customers).map(function (key) {
+      return customers[key];
+    });
+
+    document.getElementById('customers-empty').hidden = list.length > 0;
+
+    document.getElementById('customers-list').innerHTML =
+      list.slice(0, 8).map(function (customer) {
+        var initials = customer.name.split(' ')
+          .map(function (part) { return part[0] || ''; })
+          .join('').slice(0, 2).toUpperCase();
+
+        return '<div class="customer-row">' +
+          '<span class="customer-avatar">' + escape(initials) + '</span>' +
+          '<div class="customer-info"><strong>' +
+          escape(customer.name) + '</strong><span>' +
+          escape(customer.email) + '</span></div>' +
+          '<div class="customer-spend"><strong>' +
+          money(customer.total) + '</strong><span>' +
+          customer.count + ' orders</span></div></div>';
+      }).join('');
+  }
+
+  function formatDate(value) {
+    if (!value) return 'Never';
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(date);
+  }
+
+  function renderCustomerAccounts() {
+    var table = document.getElementById('customer-accounts-table');
+    var empty = document.getElementById('customer-accounts-empty');
+    if (!table || !empty) return;
+
+    empty.hidden = customers.length > 0;
+    table.innerHTML = customers.map(function (customer) {
+      return '<tr>' +
+        '<td><strong>' + escape(customer.name) + '</strong></td>' +
+        '<td>' + escape(customer.email) + '</td>' +
+        '<td class="cell-muted">' + escape(formatDate(customer.created_at)) + '</td>' +
+        '<td class="cell-muted">' + escape(formatDate(customer.last_login_at)) + '</td>' +
+        '<td>' + escape(customer.successful_logins || 0) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  async function refresh() {
+    var results = await Promise.all([
+      api('/admin/stats'),
+      api('/admin/orders'),
+      api('/admin/customers')
+    ]);
+
+    orders = Array.isArray(results[1]) ? results[1] : [];
+    customers = Array.isArray(results[2].customers) ? results[2].customers : [];
+
+    renderStats(results[0]);
+    renderOrders();
+    renderProducts(document.getElementById('product-search').value);
+    renderCustomers();
+    renderCustomerAccounts();
+  }
+
+  document.addEventListener('DOMContentLoaded', async function () {
     var loginForm = document.getElementById('admin-login-form');
-    var error = document.getElementById('admin-login-error');
-    if (localStorage.getItem(SESSION_KEY) === 'active') openDashboard();
-    loginForm.addEventListener('submit', function (event) {
-      event.preventDefault();
-      var email = document.getElementById('admin-email').value.trim().toLowerCase();
-      var password = document.getElementById('admin-password').value;
-      if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-        error.textContent = 'Incorrect admin email or password.';
-        error.hidden = false;
+    if (loginForm) {
+      loginForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        var errorBox = document.getElementById('admin-login-error');
+        var submit = loginForm.querySelector('[type="submit"]');
+        errorBox.hidden = true;
+        if (submit) submit.disabled = true;
+
+        try {
+          var email = document.getElementById('admin-email').value.trim().toLowerCase();
+          var password = document.getElementById('admin-password').value;
+          var session = await api('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email: email, password: password })
+          });
+
+          if (!session.user || session.user.role !== 'admin') {
+            throw new Error('This account does not have administrator access.');
+          }
+
+          localStorage.setItem(TOKEN_KEY, session.token);
+          localStorage.setItem('urbancart_user', JSON.stringify(session.user));
+          window.location.reload();
+        } catch (error) {
+          errorBox.textContent = error.message || 'Unable to sign in.';
+          errorBox.hidden = false;
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
+    }
+
+    var token = localStorage.getItem(TOKEN_KEY);
+
+    if (!token) return;
+
+    try {
+      var session = await api('/auth/me');
+
+      if (!session.user || session.user.role !== 'admin') {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem('urbancart_user');
         return;
       }
-      localStorage.setItem(SESSION_KEY, 'active');
-      error.hidden = true;
-      openDashboard();
-    });
-    document.getElementById('admin-logout').addEventListener('click', function () { localStorage.removeItem(SESSION_KEY); showLogin(); });
-    document.getElementById('product-search').addEventListener('input', function () { renderProducts(readProducts(), this.value); });
-    document.getElementById('orders-table').addEventListener('change', function (event) {
-      if (!event.target.classList.contains('status-select')) return;
-      var orders = readOrders();
-      var order = orders.find(function (item) { return item.id === event.target.dataset.orderId; });
-      if (order) { order.status = event.target.value; localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); refresh(); }
-    });
-    document.getElementById('orders-table').addEventListener('click', function (event) {
-      var button = event.target.closest('.order-view');
-      if (!button) return;
-      var order = readOrders().find(function (item) { return item.id === button.dataset.orderId; });
-      if (order) alert('Order ' + order.id + '\n\nCustomer: ' + ((order.customer || {}).name || 'Guest') + '\nAddress: ' + ((order.customer || {}).address || '—') + '\nTotal: ' + formatMoney(order.total));
-    });
-    window.addEventListener('storage', refresh);
+
+      showDashboard();
+      await refresh();
+    } catch (error) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('urbancart_user');
+      return;
+    }
+
+    document.getElementById('admin-logout')
+      .addEventListener('click', logout);
+
+    document.getElementById('product-search')
+      .addEventListener('input', function () {
+        renderProducts(this.value);
+      });
+
+    document.getElementById('orders-table')
+      .addEventListener('change', async function (event) {
+        if (!event.target.classList.contains('status-select')) return;
+
+        var id = event.target.dataset.orderId;
+
+        try {
+          await api('/admin/orders/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            body: JSON.stringify({
+              status: event.target.value
+            })
+          });
+
+          await refresh();
+        } catch (error) {
+          alert(error.message);
+          await refresh();
+        }
+      });
+
+    document.getElementById('orders-table')
+      .addEventListener('click', function (event) {
+        var button = event.target.closest('.order-view');
+        if (!button) return;
+
+        var order = orders.find(function (item) {
+          return String(item.id) === button.dataset.orderId;
+        });
+
+        if (!order) return;
+
+        var customer = order.customer || {};
+
+        alert(
+          'Order: ' + order.id +
+          '\nCustomer: ' + (customer.name || 'Customer') +
+          '\nEmail: ' + (customer.email || '—') +
+          '\nAddress: ' + (customer.address || order.shipping_address || '—') +
+          '\nTotal: ' + money(order.total)
+        );
+      });
   });
-}());
+})();
