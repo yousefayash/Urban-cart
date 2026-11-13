@@ -43,7 +43,7 @@
             <a class="active" href="#overview">Overview</a>
             <a href="#orders">Orders</a>
             <a href="#products">Products</a>
-            <a href="#customers">Customers</a>
+            <a href="#customer-accounts">Customer accounts</a>\n            <a href="#customers">Order insights</a>
           </nav>
           <div class="sidebar-note"><strong>Store status</strong><span><i></i> Online and accepting orders</span></div>
         </aside>
@@ -70,6 +70,12 @@
           <section class="content-card" id="products">
             <div class="card-heading"><div><span class="eyebrow">Catalog</span><h2>Product inventory</h2></div><div class="table-tools"><input id="product-search" type="search" placeholder="Search products..." aria-label="Search products"><span class="record-count" id="products-count">0 products</span></div></div>
             <div class="table-wrap"><table class="admin-table"><thead><tr><th>Product</th><th>Category</th><th>SKU</th><th>Price</th><th>Stock</th></tr></thead><tbody id="products-table"></tbody></table></div>
+          </section>
+
+          <section class="content-card" id="customer-accounts">
+            <div class="card-heading"><div><span class="eyebrow">Account activity</span><h2>Customer accounts & sign-ins</h2><p>Successful sign-ins only. Passwords are never collected or displayed.</p></div></div>
+            <div class="table-wrap"><table class="admin-table"><thead><tr><th>Customer</th><th>Email</th><th>Registered</th><th>Last successful login</th><th>Logins</th></tr></thead><tbody id="customer-accounts-table"></tbody></table></div>
+            <div class="empty-state compact" id="customer-accounts-empty" hidden><strong>No customer accounts yet</strong><p>Registered customer accounts and successful sign-ins will appear here.</p></div>
           </section>
 
           <section class="content-card" id="customers">

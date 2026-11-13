@@ -17,14 +17,24 @@
     }
 
     return fetch('/api' + url, options).then(function (response) {
-      return response.json().catch(function () {
-        return {};
-      }).then(function (data) {
+      return response.text().then(function (body) {
+        var data;
+        try {
+          data = body ? JSON.parse(body) : {};
+        } catch {
+          throw new Error('The API returned an invalid response. Please check that the backend is running.');
+        }
+
         if (!response.ok) {
-          throw new Error(data.error || 'Something went wrong.');
+          throw new Error(data.error || 'The request could not be completed.');
         }
         return data;
       });
+    }).catch(function (error) {
+      if (error instanceof TypeError) {
+        throw new Error('Unable to connect to the API. Please check that the backend is running.');
+      }
+      throw error;
     });
   }
 
@@ -39,7 +49,7 @@
   }
 
   function validEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    return /^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/.test(email);
   }
 
   function saveSession(data) {

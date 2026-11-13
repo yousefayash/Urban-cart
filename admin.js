@@ -185,40 +185,102 @@
       }).join('');
   }
 
+  function formatDate(value) {
+    if (!value) return 'Never';
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(date);
+  }
+
+  function renderCustomerAccounts() {
+    var table = document.getElementById('customer-accounts-table');
+    var empty = document.getElementById('customer-accounts-empty');
+    if (!table || !empty) return;
+
+    empty.hidden = customers.length > 0;
+    table.innerHTML = customers.map(function (customer) {
+      return '<tr>' +
+        '<td><strong>' + escape(customer.name) + '</strong></td>' +
+        '<td>' + escape(customer.email) + '</td>' +
+        '<td class="cell-muted">' + escape(formatDate(customer.created_at)) + '</td>' +
+        '<td class="cell-muted">' + escape(formatDate(customer.last_login_at)) + '</td>' +
+        '<td>' + escape(customer.successful_logins || 0) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
   async function refresh() {
     var results = await Promise.all([
       api('/admin/stats'),
-      api('/admin/orders')
+      api('/admin/orders'),
+      api('/admin/customers')
     ]);
 
     orders = Array.isArray(results[1]) ? results[1] : [];
+    customers = Array.isArray(results[2].customers) ? results[2].customers : [];
 
     renderStats(results[0]);
     renderOrders();
     renderProducts(document.getElementById('product-search').value);
     renderCustomers();
+    renderCustomerAccounts();
   }
 
   document.addEventListener('DOMContentLoaded', async function () {
+    var loginForm = document.getElementById('admin-login-form');
+    if (loginForm) {
+      loginForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        var errorBox = document.getElementById('admin-login-error');
+        var submit = loginForm.querySelector('[type="submit"]');
+        errorBox.hidden = true;
+        if (submit) submit.disabled = true;
+
+        try {
+          var email = document.getElementById('admin-email').value.trim().toLowerCase();
+          var password = document.getElementById('admin-password').value;
+          var session = await api('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email: email, password: password })
+          });
+
+          if (!session.user || session.user.role !== 'admin') {
+            throw new Error('This account does not have administrator access.');
+          }
+
+          localStorage.setItem(TOKEN_KEY, session.token);
+          localStorage.setItem('urbancart_user', JSON.stringify(session.user));
+          window.location.reload();
+        } catch (error) {
+          errorBox.textContent = error.message || 'Unable to sign in.';
+          errorBox.hidden = false;
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
+    }
+
     var token = localStorage.getItem(TOKEN_KEY);
 
-    if (!token) {
-      logout();
-      return;
-    }
+    if (!token) return;
 
     try {
       var session = await api('/auth/me');
 
       if (!session.user || session.user.role !== 'admin') {
-        logout();
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem('urbancart_user');
         return;
       }
 
       showDashboard();
       await refresh();
     } catch (error) {
-      logout();
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('urbancart_user');
       return;
     }
 

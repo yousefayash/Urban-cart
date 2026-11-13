@@ -361,6 +361,14 @@ app.post('/api/auth/login', authLimiter, validate(loginSchema), asyncRoute(async
         return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // Record successful customer sign-ins only. Never store submitted passwords.
+    if (user.role === 'customer') {
+        await db.query(
+            'INSERT INTO login_events (user_id) VALUES ($1)',
+            [user.id]
+        );
+    }
+
     res.json({
         user: publicUser(user),
         token: sign(user)
@@ -818,7 +826,7 @@ app.get('/api/orders/:id', auth, asyncRoute(async (req, res) => {
 // Admin
 app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
     const [users, products, orders, revenue] = await Promise.all([
-        db.query('SELECT COUNT(*)::int AS count FROM users'),
+        db.query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'customer'"),
         db.query('SELECT COUNT(*)::int AS count FROM products'),
         db.query('SELECT COUNT(*)::int AS count FROM orders'),
         db.query(
@@ -833,6 +841,26 @@ app.get('/api/admin/stats', auth, admin, asyncRoute(async (req, res) => {
         orders: orders.rows[0].count,
         revenue: Number(revenue.rows[0].total)
     });
+}));
+
+app.get('/api/admin/customers', auth, admin, asyncRoute(async (req, res) => {
+    const result = await db.query(
+        `SELECT
+            u.id,
+            u.name,
+            u.email,
+            u.created_at,
+            MAX(le.logged_in_at) AS last_login_at,
+            COUNT(le.id)::int AS successful_logins
+         FROM users u
+         LEFT JOIN login_events le ON le.user_id = u.id
+         WHERE u.role = 'customer'
+         GROUP BY u.id, u.name, u.email, u.created_at
+         ORDER BY MAX(le.logged_in_at) DESC NULLS LAST, u.created_at DESC
+         LIMIT 500`
+    );
+
+    res.json({ customers: result.rows });
 }));
 
 app.get('/api/admin/orders', auth, admin, asyncRoute(async (req, res) => {
